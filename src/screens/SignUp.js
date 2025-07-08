@@ -49,7 +49,7 @@ const SignUpScreen = ({
       <View style={styles.content}>
         {/* Logo */}
         <View style={styles.iconContainer}>
-          <Image source={require('../assets/images/Logo_white_no_bg.png')} style={styles.Logo} />
+          <Image source={require('../assets/logo_dark_no_bg_no_name.png')} style={styles.Logo} />
         </View>
 
         {/* Welcome Text */}
@@ -109,7 +109,7 @@ const SignUpScreen = ({
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Already have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('LogIn')}>
-            <Link link="LogIn" style={{ marginTop: 10 }} />
+            <Link link="LogIn" style={{ marginTop: 2 }} />
           </TouchableOpacity>
         </View>
       </View>
@@ -131,7 +131,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 64,
     height: 64,
-    backgroundColor: Colors.primary,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -139,8 +138,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   Logo: {
-    width: 70,
-    height: 70,
+    width: 100,
+    height: 100,
   },
   welcomeTitle: {
     fontSize: 28,
@@ -153,7 +152,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.neutral500,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   dividerContainer: {
     flexDirection: 'row',
@@ -166,10 +165,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral500,
   },
   dividerText: {
-    marginHorizontal: 14,
+    marginHorizontal: 6,
     fontSize: 14,
     color: Colors.neutral500,
-    marginTop: -2,
+    marginTop: -10,
   },
   signUpContainer: {
     flexDirection: 'row',
@@ -179,7 +178,7 @@ const styles = StyleSheet.create({
   signUpText: {
     fontSize: 16,
     color: Colors.neutral500,
-    marginTop: 10,
+    marginTop: 2,
   },
 });
 

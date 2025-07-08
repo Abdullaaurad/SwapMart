@@ -115,7 +115,7 @@ const OnboardingScreen = ({ onContinue }) => {
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Image
-            source={require("../assets/images/Logo_white_no_bg.png")}
+            source={require('../assets/logo_dark_no_bg_no_name.png')}
             style={styles.Logo}
           />
         </View>
@@ -145,7 +145,7 @@ const OnboardingScreen = ({ onContinue }) => {
           <VerificationRow
             type="email"
             isVerified={verificationStatus.email}
-            onVerify={handleEmailVerify}
+            onVerify={() => navigation.navigate('Verification')}
           />
 
           <FormInput
@@ -160,7 +160,7 @@ const OnboardingScreen = ({ onContinue }) => {
           <VerificationRow
             type="contact"
             isVerified={verificationStatus.contact}
-            onVerify={handleContactVerify}
+            onVerify={() => navigation.navigate('Verification')}
           />
 
           <View style={styles.overallStatus}>
@@ -181,7 +181,7 @@ const OnboardingScreen = ({ onContinue }) => {
             </Text>
           </View>
 
-          <AnimatedButton title="Continue" onPress={handleContinue} />
+          <AnimatedButton title="Continue" onPress={()=> navigation.navigate('Home')} />
         </FormBox>
       </View>
     </SafeAreaView>
@@ -202,7 +202,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 64,
     height: 64,
-    backgroundColor: Colors.primary,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -210,8 +209,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   Logo: {
-    width: 70,
-    height: 70,
+    width: 110,
+    height: 110,
   },
   welcomeTitle: {
     fontSize: 28,

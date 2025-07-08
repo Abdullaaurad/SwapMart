@@ -14,8 +14,10 @@ import AnimatedButton from "../components/AnimatedButton";
 import Link from "../components/Link";
 import CircularBackButton from "../components/Back";
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 const ForgotPasswordScreen = ({ onSendOTP, onBack }) => {
+  const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [contact, setContact] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("email");
@@ -34,10 +36,10 @@ const ForgotPasswordScreen = ({ onSendOTP, onBack }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <CircularBackButton onPress={onBack} />
+        <CircularBackButton onPress={() =>  navigation.navigate('LogIn')} />
 
         <View style={styles.iconContainer}>
-          <Image source={require("../assets/images/Logo_white_no_bg.png")} style={styles.Logo} />
+          <Image source={require('../assets/logo_dark_no_bg_no_name.png')} style={styles.Logo} />
         </View>
 
         {/* Title and Description */}
@@ -156,7 +158,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 64,
     height: 64,
-    backgroundColor: Colors.primary,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -164,8 +165,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   Logo: {
-    width: 70,
-    height: 70,
+    width: 110,
+    height: 110,
   },
   title: {
     fontSize: 28,

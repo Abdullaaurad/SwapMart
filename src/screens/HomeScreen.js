@@ -1,11 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Header from '../components/Header'
 
 export default function HomeScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Welcome to SwapMart Home!</Text>
-    </View>
+    // <View style={styles.container}>
+      <Header 
+        name="Abdulla"
+        icon = ''
+      />
+    //   <Text style={styles.text}>Welcome to SwapMart Home!</Text>
+    // </View>
   );
 }
 

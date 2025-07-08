@@ -82,10 +82,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     shadowColor: Colors.neutral500,
-    shadowOffset: { width: 20, height: 10 },
-    shadowOpacity: 0.6,
+    shadowOffset: { width: 5, height: 5 },
+    shadowOpacity: 0.3,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 10,
   },
   socialIcon: {
     marginRight: 8,

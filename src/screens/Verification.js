@@ -36,7 +36,7 @@ const OTPVerificationScreen = ({
 
         <View style={styles.iconContainer}>
           <Image
-            source={require("../assets/images/Logo_white_no_bg.png")}
+            source={require('../assets/logo_dark_no_bg_no_name.png')}
             style={styles.Logo}
           />
         </View>
@@ -95,7 +95,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 64,
     height: 64,
-    backgroundColor: Colors.primary,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -103,8 +102,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   Logo: {
-    width: 70,
-    height: 70,
+    width: 110,
+    height: 110,
   },
   title: {
     fontSize: 28,
