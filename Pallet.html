@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Second-Hand App Color Palette</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .color-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: #1e293b;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 10px;
+        }
+        
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .color-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .color-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .color-swatch {
+            height: 120px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .color-info {
+            padding: 25px;
+        }
+        
+        .color-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+        
+        .color-code {
+            font-family: 'Courier New', monospace;
+            background: #f1f5f9;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #475569;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        
+        .usage-list {
+            list-style: none;
+        }
+        
+        .usage-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+            color: #475569;
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .usage-list li:before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #2563eb;
+            font-weight: bold;
+        }
+        
+        .usage-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .mockup-section {
+            background: #f8fafc;
+            padding: 40px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+        
+        .mockup-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: #1e293b;
+            text-align: center;
+        }
+        
+        .phone-mockup {
+            max-width: 300px;
+            margin: 0 auto;
+            background: #1e293b;
+            border-radius: 25px;
+            padding: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        
+        .screen {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            min-height: 500px;
+        }
+        
+        .app-header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-weight: 700;
+        }
+        
+        .product-card {
+            margin: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .product-image {
+            height: 120px;
+            background: linear-gradient(45deg, #e2e8f0, #cbd5e1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-weight: 600;
+        }
+        
+        .product-info {
+            padding: 15px;
+            background: white;
+        }
+        
+        .product-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+        
+        .product-price {
+            color: #059669;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        
+        .product-condition {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            display: inline-block;
+        }
+        
+        .bottom-nav {
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            padding: 15px;
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .nav-item {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+        
+        .nav-item.active {
+            color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Second-Hand App Color Palette</h1>
+            <p>A thoughtfully crafted color system for sustainable shopping</p>
+        </div>
+        
+        <div class="content">
+            <div class="color-section">
+                <h2 class="section-title">Primary Colors</h2>
+                <div class="color-grid">
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #2563eb;">
+                            <span style="color: white; font-weight: bold; font-size: 1.2rem;">#2563eb</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Trust Blue</h3>
+                            <div class="color-code">#2563eb</div>
+                            <ul class="usage-list">
+                                <li>Primary buttons (Buy Now, Add to Cart)</li>
+                                <li>App navigation bar</li>
+                                <li>Active states and selections</li>
+                                <li>Links and interactive elements</li>
+                                <li>Progress indicators</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #1e293b;">
+                            <span style="color: white; font-weight: bold; font-size: 1.2rem;">#1e293b</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Deep Slate</h3>
+                            <div class="color-code">#1e293b</div>
+                            <ul class="usage-list">
+                                <li>Main headings and titles</li>
+                                <li>Product names and descriptions</li>
+                                <li>Important text content</li>
+                                <li>Navigation icons</li>
+                                <li>Form labels</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="color-section">
+                <h2 class="section-title">Secondary Colors</h2>
+                <div class="color-grid">
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #b1d4ff;">
+                            <span style="color: white; font-weight: bold; font-size: 1.2rem;">#60a5fa</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Light Blue</h3>
+                            <div class="color-code">#60a5fa</div>
+                            <ul class="usage-list">
+                                <li>Secondary buttons and actions</li>
+                                <li>Information badges and tags</li>
+                                <li>Gentle highlights and accents</li>
+                                <li>Product category indicators</li>
+                                <li>Soft call-to-action elements</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #059669;">
+                            <span style="color: white; font-weight: bold; font-size: 1.2rem;">#059669</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Success Green</h3>
+                            <div class="color-code">#059669</div>
+                            <ul class="usage-list">
+                                <li>Price tags and cost savings</li>
+                                <li>Success messages and confirmations</li>
+                                <li>"Good condition" product badges</li>
+                                <li>Eco-friendly indicators</li>
+                                <li>Positive ratings and reviews</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #dc2626;">
+                            <span style="color: white; font-weight: bold; font-size: 1.2rem;">#dc2626</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Alert Red</h3>
+                            <div class="color-code">#dc2626</div>
+                            <ul class="usage-list">
+                                <li>Error messages and warnings</li>
+                                <li>Delete and remove actions</li>
+                                <li>Sold out or unavailable items</li>
+                                <li>Required field indicators</li>
+                                <li>Critical notifications</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #d97706;">
+                            <span style="color: white; font-weight: bold; font-size: 1.2rem;">#d97706</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Warm Orange</h3>
+                            <div class="color-code">#d97706</div>
+                            <ul class="usage-list">
+                                <li>Special offers and discounts</li>
+                                <li>Hot deals and trending items</li>
+                                <li>Warning states and cautions</li>
+                                <li>Featured product highlights</li>
+                                <li>Time-sensitive promotions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="color-section">
+                <h2 class="section-title">Neutral Colors</h2>
+                <div class="color-grid">
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #f8fafc;">
+                            <span style="color: #1e293b; font-weight: bold; font-size: 1.2rem;">#f8fafc</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Light Background</h3>
+                            <div class="color-code">#f8fafc</div>
+                            <ul class="usage-list">
+                                <li>Main app background</li>
+                                <li>Card and container backgrounds</li>
+                                <li>Input field backgrounds</li>
+                                <li>Modal and popup backgrounds</li>
+                                <li>Section dividers</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #64748b;">
+                            <span style="color: white; font-weight: bold; font-size: 1.2rem;">#64748b</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Muted Gray</h3>
+                            <div class="color-code">#64748b</div>
+                            <ul class="usage-list">
+                                <li>Secondary text and descriptions</li>
+                                <li>Placeholder text in forms</li>
+                                <li>Inactive navigation items</li>
+                                <li>Timestamps and metadata</li>
+                                <li>Subtle icons and decorative elements</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #e2e8f0;">
+                            <span style="color: #1e293b; font-weight: bold; font-size: 1.2rem;">#e2e8f0</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Border Gray</h3>
+                            <div class="color-code">#e2e8f0</div>
+                            <ul class="usage-list">
+                                <li>Card borders and dividers</li>
+                                <li>Input field borders</li>
+                                <li>Separator lines</li>
+                                <li>Table borders</li>
+                                <li>Subtle background variations</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="color-section">
+                <h2 class="section-title">Accent Colors</h2>
+                <div class="color-grid">
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #fef3c7;">
+                            <span style="color: #92400e; font-weight: bold; font-size: 1.2rem;">#fef3c7</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Condition Yellow</h3>
+                            <div class="color-code">#fef3c7</div>
+                            <ul class="usage-list">
+                                <li>Product condition badges</li>
+                                <li>Information highlights</li>
+                                <li>Tips and helpful hints</li>
+                                <li>Moderate priority notifications</li>
+                                <li>Category tags and filters</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="color-card">
+                        <div class="color-swatch" style="background: #ede9fe;">
+                            <span style="color: #7c3aed; font-weight: bold; font-size: 1.2rem;">#ede9fe</span>
+                        </div>
+                        <div class="color-info">
+                            <h3 class="color-name">Premium Purple</h3>
+                            <div class="color-code">#ede9fe</div>
+                            <ul class="usage-list">
+                                <li>Premium or vintage item highlights</li>
+                                <li>Special collections and curated items</li>
+                                <li>Loyalty program features</li>
+                                <li>Brand collaboration indicators</li>
+                                <li>VIP user status elements</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mockup-section">
+                <h3 class="mockup-title">Color Palette in Action</h3>
+                <div class="phone-mockup">
+                    <div class="screen">
+                        <div class="app-header">
+                            SecondLife Marketplace
+                        </div>
+                        
+                        <div class="product-card">
+                            <div class="product-image">
+                                Product Image
+                            </div>
+                            <div class="product-info">
+                                <div class="product-title">Vintage Leather Jacket</div>
+                                <div class="product-price">$45.00</div>
+                                <span class="product-condition">Good Condition</span>
+                            </div>
+                        </div>
+                        
+                        <div class="product-card">
+                            <div class="product-image">
+                                Product Image
+                            </div>
+                            <div class="product-info">
+                                <div class="product-title">Designer Handbag</div>
+                                <div class="product-price">$120.00</div>
+                                <span class="product-condition">Excellent</span>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 15px; text-align: center;">
+                            <button style="background: #60a5fa; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; margin: 5px;">View Details</button>
+                        </div>
+                        
+                        <div class="bottom-nav">
+                            <div class="nav-item active">Home</div>
+                            <div class="nav-item">Search</div>
+                            <div class="nav-item">Sell</div>
+                            <div class="nav-item">Messages</div>
+                            <div class="nav-item">Profile</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
