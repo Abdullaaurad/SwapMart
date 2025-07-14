@@ -3,7 +3,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import SplashScreen from './src/screens/SplashScreen';
-import HomeScreen from './src/screens/HomeScreen';
 import LogIn from './src/screens/LogIn';
 import SignUp from './src/screens/SignUp';
 import ForgotPassword from './src/screens/ForgotPassword';
@@ -25,6 +24,12 @@ import LoginActivity from './src/screens/LoginActivity';
 import FaqAnswer from './src/screens/FaqAnswer'
 import RecoverPassword from './src/screens/RecoverPassword';
 
+import HomeScreen from './src/screens/HomeScreen';
+import ViewAllCategories from './src/screens/ViewAllCategory';
+import ViewAllFeaturedItems from './src/screens/ViewAllFetured';
+import Search from './src/screens/SearchScreen';
+import AddProduct from './src/screens/AddProductFlow';
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -45,7 +50,6 @@ export default function App() {
         <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
 
         {/* Main App Screens */}
-        <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Profile" component={Profile} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
@@ -58,6 +62,12 @@ export default function App() {
         <Stack.Screen name="LoginActivity" component={LoginActivity} />
         <Stack.Screen name="FaqAnswer" component={FaqAnswer} />
         <Stack.Screen name="RecoverPassword" component={RecoverPassword} />
+
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="ViewAllCategories" component={ViewAllCategories} />
+        <Stack.Screen name="ViewAllFeaturedItems" component={ViewAllFeaturedItems} />
+        <Stack.Screen name="Search" component={Search} />
+        <Stack.Screen name="AddProduct" component={AddProduct} />
         
       </Stack.Navigator>
     </NavigationContainer>

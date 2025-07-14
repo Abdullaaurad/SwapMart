@@ -10,8 +10,35 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import Colors from '../constants/colors';
 import { useNavigation } from '@react-navigation/native';
 
-const Header = ({ icon = 'back', style, name, image, onIconPress }) => {
+const Header = ({
+  icon = 'back',
+  onIconPress,
+  showNotification = true,
+  style,
+  name,
+  image,
+}) => {
   const navigation = useNavigation();
+
+  const renderLeftIcon = () => {
+    if (icon !== 'back') return null;
+
+    return (
+      <TouchableOpacity onPress={onIconPress} style={styles.iconButton}>
+        <Icon name="chevron-back" size={24} color={Colors.text} />
+      </TouchableOpacity>
+    );
+  };
+
+  const renderNotificationIcon = () => {
+    if (!showNotification) return null;
+
+    return (
+      <TouchableOpacity style={styles.iconButton}>
+        <Icon name="notifications-outline" size={24} color={Colors.textSecondary} />
+      </TouchableOpacity>
+    );
+  };
 
   const renderProfile = () => {
     if (image) {
@@ -37,29 +64,15 @@ const Header = ({ icon = 'back', style, name, image, onIconPress }) => {
   return (
     <View style={[styles.header, style]}>
       <View style={styles.headerContent}>
-        {icon !== '' && (
-          <TouchableOpacity onPress={onIconPress} style={styles.backButton}>
-            <Icon
-              name={icon === 'back' ? 'chevron-back' : 'menu'}
-              size={28}
-              color={Colors.neutral0}
-            />
-          </TouchableOpacity>
-        )}
-
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/logo_light_no_bg_no_name.png')}
-            style={styles.logoImage}
-          />
-          <View style={styles.logoTextContainer}>
-            <Text style={styles.logoLineTop}>Motor</Text>
-            <Text style={styles.logoLineBottom}>Trace</Text>
-          </View>
+        <View style={styles.headerLeft}>
+          {renderLeftIcon()}
+          <Text style={styles.headerTitle}>SwapMart</Text>
         </View>
 
-        <View style={styles.spacer} />
-        {renderProfile()}
+        <View style={styles.headerRight}>
+          {renderNotificationIcon()}
+          {renderProfile()}
+        </View>
       </View>
     </View>
   );
@@ -67,7 +80,7 @@ const Header = ({ icon = 'back', style, name, image, onIconPress }) => {
 
 const styles = StyleSheet.create({
   header: {
-    paddingTop: 45,
+    paddingTop: 30,
     paddingBottom: 10,
     shadowColor: Colors.shadowMd,
     shadowOffset: { width: 0, height: 4 },
@@ -75,68 +88,53 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     zIndex: 10,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: -10,
-  },
-  spacer: {
-    flex: 1,
-  },
-  profileImage: {
-    width: 45,
-    height: 45,
-    borderRadius: 20,
-  },
-  profilePlaceholder: {
-    width: 45,
-    height: 45,
-    borderRadius: 30,
-    backgroundColor: Colors.neutral300,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileInitial: {
-    color: Colors.neutral900,
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  logoContainer: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoImage: {
-    width: 50,
-    height: 50,
-    marginRight: 2,
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  logoTextContainer: {
-    flexDirection: 'column',
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginLeft: 12,
+  },
+  iconButton: {
+    padding: 4,
+  },
+  profileImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginLeft: 16,
+  },
+  profilePlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 16,
   },
-  logoLineTop: {
-    color: Colors.neutral0,
+  profileInitial: {
+    color: Colors.surface,
     fontSize: 16,
     fontWeight: '600',
-    lineHeight: 18,
-  },
-  logoLineBottom: {
-    color: Colors.neutral0,
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 18,
   },
 });
 

@@ -4,56 +4,46 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Platform,
-  ActivityIndicator,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Colors from '../constants/colors';
 
 const SearchBar = ({
-  placeholder,
   value,
   onChangeText,
+  onFilterPress,
+  placeholder = 'Search for items...',
   containerStyle,
   inputStyle,
-  isLoading = false,
-  autoFocus = false,
-  onSubmitEditing,
-  editable = true,
 }) => {
   return (
-    <View style={[styles.overlayContainer, containerStyle]}>
-      <View style={styles.searchBar}>
-        {isLoading ? (
-          <ActivityIndicator 
-            size="small" 
-            color={Colors.neutral500} 
-            style={styles.icon} 
+    <View style={[styles.searchContainer, containerStyle]}>
+      <View style={styles.searchWrapper}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color={Colors.textSecondary}
+            style={styles.searchIcon}
           />
-        ) : (
-          <Icon name="search" size={20} color={Colors.neutral500} style={styles.icon} />
-        )}
-        <TextInput
-          style={[styles.input, inputStyle]}
-          placeholder={placeholder}
-          placeholderTextColor={Colors.neutral500}
-          value={value}
-          onChangeText={onChangeText}
-          returnKeyType="search"
-          autoFocus={autoFocus}
-          onSubmitEditing={onSubmitEditing}
-          editable={editable}
-          accessibilityLabel="Search input"
-          accessibilityHint="Enter text to search for products"
-          blurOnSubmit={false}
-        />
-        <TouchableOpacity 
-          onPress={() => onChangeText && onChangeText('')}
-          style={styles.clearButton}
-          accessibilityLabel="Clear search"
-          accessibilityRole="button"
+          <TextInput
+            style={[styles.searchInput, inputStyle]}
+            placeholder={placeholder}
+            placeholderTextColor={Colors.textSecondary}
+            value={value}
+            onChangeText={onChangeText}
+          />
+        </View>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={onFilterPress}
+          accessibilityLabel="Open filters"
         >
-          <Icon name="close-circle" size={25} color={Colors.neutral500} />
+          <Ionicons
+            name="filter-outline"
+            size={20}
+            color={Colors.textSecondary}
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -61,44 +51,41 @@ const SearchBar = ({
 };
 
 const styles = StyleSheet.create({
-  overlayContainer: {
-    position: 'relative',
-    zIndex: 10,
-    padding: 10,
+  searchContainer: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  searchBar: {
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchInputContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.neutral50,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.neutral200,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    marginRight: 12,
   },
-  icon: {
-    marginRight: 10,
+  searchIcon: {
+    marginRight: 8,
   },
-  input: {
+  searchInput: {
     flex: 1,
     fontSize: 16,
-    color: Colors.neutral900,
-    paddingVertical: 0,
+    color: Colors.text,
+    paddingVertical: 12,
   },
-  clearButton: {
-    padding: 4,
-    marginLeft: 4,
+  filterButton: {
+    padding: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
 });
 
