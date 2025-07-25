@@ -11,6 +11,7 @@ import {
   FlatList,
   Image,
   Dimensions,
+  Platform
 } from 'react-native';
 import Colors from '../constants/colors'
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -199,7 +200,7 @@ const SwapMartHomePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Platform.OS === 'ios' ? Colors.neutral0 : Colors.background,
   },
   scrollView: {
     flex: 1,

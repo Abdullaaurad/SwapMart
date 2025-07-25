@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Colors from '../constants/colors';
 import { useNavigation } from '@react-navigation/native';
@@ -10,8 +10,8 @@ const BottomNavigation = ({ activeTab, onTabPress }) => {
     { id: 'Home', icon: 'home', label: 'Home' },
     { id: 'Search', icon: 'search', label: 'Search' },
     { id: 'AddProduct', icon: 'add-circle-outline', label: 'Add' },
-    { id: 'messages', icon: 'chatbubble-outline', label: 'Message' },
-    { id: 'profile', icon: 'person-outline', label: 'Profile' },
+    { id: 'ChatList', icon: 'chatbubble-outline', label: 'Message' },
+    { id: 'Activity', icon: 'person-outline', label: 'Profile' },
   ];
 
   return (
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     paddingBottom: 12,
-    marginBottom: 10
+    marginBottom: Platform.OS === 'ios' ? -20 : 10,
   },
   bottomNavContent: {
     flexDirection: 'row',

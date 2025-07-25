@@ -9,6 +9,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import Colors from '../constants/colors';
 import { useNavigation } from '@react-navigation/native';
+import { Platform } from 'react-native';
 
 const Header = ({
   icon = 'back',
@@ -80,7 +81,7 @@ const Header = ({
 
 const styles = StyleSheet.create({
   header: {
-    paddingTop: 30,
+    paddingTop: Platform.OS === 'ios' ? 0 : 30,
     paddingBottom: 10,
     shadowColor: Colors.shadowMd,
     shadowOffset: { width: 0, height: 4 },

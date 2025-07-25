@@ -15,9 +15,11 @@ import {
 import Colors from '../constants/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
+import BottomNavigation from '../components/BottomNav';
 
 const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
   const [errors, setErrors] = useState({});
+  const [activeTab, setActiveTab] = useState('AddProducts');
 
   const categories = [
     { id: 'electronics', name: 'Electronics', icon: 'phone-portrait-outline' },
@@ -233,6 +235,7 @@ const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
           <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
         </TouchableOpacity>
       </View>
+      <BottomNavigation activeTab={'AddProduct'} onTabPress={setActiveTab} />
     </View>
   );
 };
@@ -244,6 +247,7 @@ const imageSize = (width - 48) / 3;
 
 const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
   const maxImages = 8;
+  const [activeTab, setActiveTab] = useState('home');
 
   const openImagePicker = () => {
     Alert.alert(
@@ -418,6 +422,7 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
           <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
         </TouchableOpacity>
       </View>
+      <BottomNavigation activeTab={'AddProduct'} onTabPress={setActiveTab} />
     </View>
   );
 };
@@ -427,6 +432,7 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
 const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
   const [errors, setErrors] = useState({});
   const [newWantedItem, setNewWantedItem] = useState('');
+  const [activeTab, setActiveTab] = useState('home');
 
   const categories = [
     { id: 'electronics', name: 'Electronics', icon: 'phone-portrait-outline' },
@@ -733,6 +739,7 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
           <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
         </TouchableOpacity>
       </View>
+      <BottomNavigation activeTab={'AddProduct'} onTabPress={setActiveTab} />
     </View>
   );
 };
@@ -741,6 +748,7 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
 
 const SwapPreview = ({ data, onSubmit, onBack, onEdit }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('home');
 
   const getCategoryName = (categoryId) => {
     const categories = {
@@ -982,6 +990,7 @@ const SwapPreview = ({ data, onSubmit, onBack, onEdit }) => {
           </Text>
         </TouchableOpacity>
       </View>
+      <BottomNavigation activeTab={'AddProduct'} onTabPress={setActiveTab} />
     </View>
   );
 };

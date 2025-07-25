@@ -29,6 +29,15 @@ import ViewAllCategories from './src/screens/ViewAllCategory';
 import ViewAllFeaturedItems from './src/screens/ViewAllFetured';
 import Search from './src/screens/SearchScreen';
 import AddProduct from './src/screens/AddProductFlow';
+import ChatDetails from './src/screens/ChatPage'
+import ChatList from './src/screens/ChatListing';
+import Activity from './src/screens/Activity';
+import MyListings from './src/screens/MyListing';
+import MyOffers from './src/screens/MyOffersPage';
+import RecentlyViewed from './src/screens/RecentlyViewedPage';
+import ReviewsRatings from './src/screens/ReviewsRatingsPage';
+import SavedItems from './src/screens/SavedItemsPage';
+import SwapHistory from './src/screens/SwapHistory';
 
 const Stack = createNativeStackNavigator();
 
@@ -68,6 +77,16 @@ export default function App() {
         <Stack.Screen name="ViewAllFeaturedItems" component={ViewAllFeaturedItems} />
         <Stack.Screen name="Search" component={Search} />
         <Stack.Screen name="AddProduct" component={AddProduct} />
+        <Stack.Screen name="ChatDetails" component={ChatDetails} />
+        <Stack.Screen name="ChatList" component={ChatList} />
+        <Stack.Screen name="Activity" component={Activity} />
+
+        <Stack.Screen name="MyListings" component={MyListings} />
+        <Stack.Screen name="MyOffers" component={MyOffers} />
+        <Stack.Screen name="RecentlyViewed" component={RecentlyViewed} />
+        <Stack.Screen name="ReviewsRatings" component={ReviewsRatings} />
+        <Stack.Screen name="SavedItems" component={SavedItems} />
+        <Stack.Screen name="SwapHistory" component={SwapHistory} />
         
       </Stack.Navigator>
     </NavigationContainer>

@@ -80,18 +80,6 @@ const SignUpScreen = ({
             error="Wrong password"
           />
 
-          <FormInput
-            label="Confirm Password"
-            placeholder="Re-enter your password"
-            iconName="lock-closed-outline"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            error="password doesn't match"
-          />
-
           <AnimatedButton title="Sign up" onPress={() => navigation.navigate('LogIn')} style={{ marginBottom: 24 }} />
 
           <View style={styles.dividerContainer}>
