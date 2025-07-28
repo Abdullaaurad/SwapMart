@@ -14,7 +14,10 @@ import FormInput from '../components/FormInput';
 import Link from '../components/Link';
 import SocialLoginButtons from '../components/SocialLoginButtons';
 import FormBox from '../components/FormBox';
+import CustomAlert from '../components/CustomAlert';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
 
 const SignUpScreen = ({
   onSignUp,
@@ -23,24 +26,126 @@ const SignUpScreen = ({
   onLoginRedirect,
 }) => {
   const navigation = useNavigation();
-  const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignUp = () => {
-    if (!name.trim() || !username.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    buttonType: 'none',
+    onClose: () => { },
+  });
+
+  const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttonType,
+      onClose: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        onClose();
+      },
+    });
+  };
+
+  // Clear errors when user starts typing
+  const handleUsernameChange = (text) => {
+    setUsername(text);
+    if (usernameError) {
+      setUsernameError('');
+    }
+  };
+
+  const handlePasswordChange = (text) => {
+    setPassword(text);
+    if (passwordError) {
+      setPasswordError('');
+    }
+  };
+
+  // Clear all field errors
+  const clearFieldErrors = () => {
+    setUsernameError('');
+    setPasswordError('');
+  };
+
+  const handleSignUp = async () => {
+    // Clear any existing errors
+    clearFieldErrors();
+    
+    // Basic validation
+    if (!username.trim() || !password.trim()) {
+      if (!username.trim()) {
+        setUsernameError('Username is required');
+      }
+      if (!password.trim()) {
+        setPasswordError('Password is required');
+      }
       return;
     }
 
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
+    setIsLoading(true);
+    console.log(username, password);
 
-    if (onSignUp) {
-      onSignUp(name, username, password);
+    try {
+      const response = await axios.post(`${BASE_URL}/users/signup`, {
+        username,
+        password,
+      });
+
+      if (response.data.success) {
+        showAlert(
+          'Success', 
+          'Account created successfully!', 
+          'success', 
+          'none',
+          () => { 
+            navigation.navigate('LogIn');
+          }
+        );
+      } else {
+        // Handle server response with success: false
+        const errorMessage = response.data.message;
+        
+        // If no field errors, show general alert
+        if (errorMessage) {
+          showAlert('Error', errorMessage, 'error', 'single');
+        }
+      }
+    } catch (error) {
+      console.error('SignUp Error:', error);
+      
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.message || 'Registration failed';
+        if(error.response.data.row === 'username'){
+          setUsernameError('Username already exists');
+        }else if(error.response.data.row === 'password'){
+          setPasswordError('Password must be at least 6 characters long');
+        }else{
+          showAlert('Registration Failed', errorMessage, 'error', 'none');
+        }     
+      } else if (error.request) {
+        // Network error
+        showAlert(
+          'Connection Error',
+          'Could not connect to server. Please check your internet connection and try again.',
+          'error',
+          'single'
+        );
+      } else {
+        // Other error
+        showAlert('Error', 'An unexpected error occurred. Please try again.', 'error', 'single');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -62,10 +167,10 @@ const SignUpScreen = ({
             placeholder="Choose a username"
             iconName="person-outline"
             value={username}
-            onChangeText={setUsername}
+            onChangeText={handleUsernameChange}
             autoCapitalize="none"
             autoCorrect={false}
-            error="Username already exists"
+            error={usernameError}
           />
 
           <FormInput
@@ -73,14 +178,19 @@ const SignUpScreen = ({
             placeholder="Enter your password"
             iconName="lock-closed-outline"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
-            error="Wrong password"
+            error={passwordError}
           />
 
-          <AnimatedButton title="Sign up" onPress={() => navigation.navigate('LogIn')} style={{ marginBottom: 24 }} />
+          <AnimatedButton 
+            title={isLoading ? 'Signing Up...' : 'Sign Up'} 
+            onPress={handleSignUp} 
+            style={{ marginBottom: 24 }}
+            loading={isLoading}
+          />
 
           <View style={styles.dividerContainer}>
             <View style={styles.dividerLine} />
@@ -101,6 +211,15 @@ const SignUpScreen = ({
           </TouchableOpacity>
         </View>
       </View>
+      
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonType={alertConfig.buttonType}
+        onClose={alertConfig.onClose}
+      />
     </SafeAreaView>
   );
 };

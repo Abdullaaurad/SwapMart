@@ -15,7 +15,11 @@ import FormInput from '../components/FormInput';
 import Link from '../components/Link';
 import SocialLoginButtons from '../components/SocialLoginButtons';
 import FormBox from '../components/FormBox';
+import CustomAlert from '../components/CustomAlert';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LogIn = ({
   onLogin,
@@ -28,14 +32,147 @@ const LogIn = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
+    const [alertConfig, setAlertConfig] = useState({
+      visible: false,
+      title: '',
+      message: '',
+      type: 'info',
+      buttonType: 'none',
+      onClose: () => { },
+    });
+  
+    const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
+      setAlertConfig({
+        visible: true,
+        title,
+        message,
+        type,
+        buttonType,
+        onClose: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          onClose();
+        },
+      });
+    };
+
+  const handleUsernameChange = (text) => {
+    setUsername(text);
+    if (usernameError) {
+      setUsernameError('');
     }
-    onLogin?.(username, password);
   };
+
+  const handlePasswordChange = (text) => {
+    setPassword(text);
+    if (passwordError) {
+      setPasswordError('');
+    }
+  };
+
+  // Clear all field errors
+  const clearFieldErrors = () => {
+    setUsernameError('');
+    setPasswordError('');
+  };
+
+  const handleLogIn = async () => {
+  clearFieldErrors();
+  
+  // Basic validation
+  if (!username.trim() || !password.trim()) {
+    if (!username.trim()) {
+      setUsernameError('Username is required');
+    }
+    if (!password.trim()) {
+      setPasswordError('Password is required');
+    }
+    return;
+  }
+  setIsLoading(true);
+
+  try {
+    const response = await axios.post(`${BASE_URL}/users/login`, {
+      username,
+      password,
+    });
+
+    if (response.data.success) {
+      const { token, user } = response.data;
+      
+      try {
+        if (token) {
+          await AsyncStorage.setItem('jwt_token', token);
+        }
+        if (user) {
+          await AsyncStorage.setItem('user_id', user.id?.toString() || '');
+        }
+        if (token) {
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+        console.log(response.data);
+        
+        showAlert(
+          'Success',
+          'Login successful!',
+          'success',
+          'none',
+          () => {
+            response.data.onboard? navigation.navigate('Home') : navigation.navigate('Onboarding');
+          }
+        );
+        
+      } catch (storageError) {
+        console.error('Storage error:', storageError);
+        showAlert(
+          'Warning',
+          'Login successful, but failed to save session data.',
+          'warning',
+          'single'
+        );
+      }
+      
+    } else {
+      const errorMessage = response.data.message || 'Something went wrong';
+      if (!fieldErrorHandled) {
+        showAlert('Login Failed', errorMessage, 'error', 'single');
+      }
+    }
+    
+  } catch (error) {    
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.message || 'Login failed';
+        const errorRow = error.response.data?.row;
+        
+        // Handle specific field errors for login
+        if (errorRow === 'username') {
+          setUsernameError(error.response.data.message || 'Invalid username');
+        } else if (errorRow === 'password') {
+          setPasswordError(error.response.data.message || 'Invalid password');
+        } else {
+          showAlert('Login Failed', errorMessage, 'error', 'single');
+        }
+        
+      } else if (error.request) {
+        // Network error
+        showAlert(
+          'Connection Error',
+          'Could not connect to server. Please check your internet connection and try again.',
+          'error',
+          'single'
+        );
+      } else {
+        // Other error
+        showAlert('Error', 'An unexpected error occurred. Please try again.', 'error', 'single');
+      }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -59,10 +196,10 @@ const LogIn = ({
             placeholder="Enter your username"
             iconName="person-outline"
             value={username}
-            onChangeText={setUsername}
+            onChangeText={handleUsernameChange}
             autoCapitalize="none"
             autoCorrect={false}
-            error="Username not found"
+            error={usernameError}
           />
 
           {/* Password Input */}
@@ -71,11 +208,11 @@ const LogIn = ({
             placeholder="Enter your password"
             iconName="lock-closed-outline"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
-            error="Wrong password"
+            error={passwordError}
           />
 
           {/* Remember Me & Forgot Password */}
@@ -110,10 +247,8 @@ const LogIn = ({
 
           {/* Sign In Button */}
           <AnimatedButton
-            title="Log In"
-            onPress={() => {
-              navigation.navigate('Onboarding');
-            }}
+            title={isLoading ? 'Login...' : 'Log In'}
+            onPress={handleLogIn}
             style={{ marginBottom: 24 }}
           />
 
@@ -139,10 +274,20 @@ const LogIn = ({
               navigation.navigate('SignUp');
             }}
           >
-            <Link link="Sign up" style={{ marginTop: 25 }} />
+            <Link link="Sign up" style={{marginBottom: 25}}/>
           </TouchableOpacity>
         </View>
       </View>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonType={alertConfig.buttonType}
+        onClose={alertConfig.onClose}
+      />
+
     </SafeAreaView>
   );
 };
@@ -237,7 +382,8 @@ const styles = StyleSheet.create({
   signUpText: {
     fontSize: 16,
     color: Colors.neutral500,
-    marginTop: 25,
+    marginTop: 5,
+    marginBottom: 25,
   },
 });
 

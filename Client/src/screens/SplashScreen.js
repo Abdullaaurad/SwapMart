@@ -44,7 +44,7 @@ export default function SplashScreen() {
         bounceLoop.current?.stop();
 
         // Navigate to home
-        navigation.replace('SignUp');
+        navigation.replace('LogIn');
     };
 
     return (
