@@ -100,30 +100,32 @@ const LogIn = ({
       password,
     });
 
-    if (response.data.success) {
-      const { token, user } = response.data;
-      
-      try {
-        if (token) {
-          await AsyncStorage.setItem('jwt_token', token);
-        }
-        if (user) {
-          await AsyncStorage.setItem('user_id', user.id?.toString() || '');
-        }
-        if (token) {
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
-        console.log(response.data);
-        
-        showAlert(
-          'Success',
-          'Login successful!',
-          'success',
-          'none',
-          () => {
-            response.data.onboard? navigation.navigate('Home') : navigation.navigate('Onboarding');
-          }
-        );
+            if (response.data.success) {
+          const { token, user } = response.data;
+          
+          try {
+            if (token) {
+              await AsyncStorage.setItem('jwt_token', token);
+            }
+            if (token) {
+              axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            }
+            console.log(response.data);
+            
+            showAlert(
+              'Success',
+              'Login successful!',
+              'success',
+              'none',
+              () => {
+                // Check if user has completed onboarding
+                if (user.onboard) {
+                  navigation.navigate('Home');
+                } else {
+                  navigation.navigate('Onboarding', { userId: user.id });
+                }
+              }
+            );
         
       } catch (storageError) {
         console.error('Storage error:', storageError);

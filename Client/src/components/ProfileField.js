@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons'; // or the correct icon package you're using
+import Icon from 'react-native-vector-icons/Ionicons'; // or the correct icon package you're using
 import Colors from '../constants/colors';
 
 const ProfileField = ({ label, value, iconName, isLast = false }) => {

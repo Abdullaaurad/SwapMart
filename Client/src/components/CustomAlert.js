@@ -22,7 +22,7 @@ const CustomAlert = ({
   confirmText = 'OK',
   cancelText = 'Cancel',
   autoDismiss = false, // Auto dismiss after 2 seconds when buttonType is 'none'
-  autoDismissDelay = 2000
+  autoDismissDelay = 1000
 }) => {
   // Auto dismiss effect
   useEffect(() => {

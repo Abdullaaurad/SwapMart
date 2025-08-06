@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import {
   View,
   Text,
@@ -15,38 +15,116 @@ import FormBox from '../components/FormBox';
 import Header from '../components/Header';
 import { useNavigation } from '@react-navigation/native';
 import ProfileField from '../components/ProfileField';
+import CustomAlert from '../components/CustomAlert';
+import * as Linking from 'expo-linking';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const UserProfileScreen = () => {
   const navigation = useNavigation();
   const [profileData, setProfileData] = useState({
-    username: 'john_doe',
-    email: 'johndoe@email.com',
-    fullName: 'John Doe',
-    phoneNumber: '+94 71 481 0928',
+    username: '',
+    email: '',
+    fullName: '',
+    phoneNumber: '',
     profileImage: '', // Empty string means no image
-    joinDate: 'Member since March 2024'
+    bio: '',
+    location: '',
+    latitude: null,
+    longitude: null,
   });
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive' },
-      ]
-    );
+  const logout = async () => {
+    try{
+      const response = await axios.post(`${BASE_URL}/users/Logout`)
+      if(response.data.success) {
+        AsyncStorage.removeItem('token');
+        showAlert(
+          'Logout',
+          'Logout successful',
+          'success',
+          'none',
+        );
+        setTimeout(() => {
+          navigation.navigate('LogIn');
+        }, 1000);
+      }
+    }
+    catch (error) {
+      console.error('Logout error:', error);
+      showAlert(
+        'Logout Error',
+        'An error occurred while logging out. Please try again.',
+        'error',
+        'none',
+      );
+    }
+  }
+
+  useEffect(() => {
+    const ProfileData = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/users/Profile`);
+        // console.log('Profile Data:', response.data);
+        if (response.data.success) {
+          setProfileData({
+            email: response.data.user.email,
+            fullName: response.data.user.fullName,
+            phoneNumber: response.data.user.phone,
+            profileImage: response.data.user.profile_image || '',
+            bio: response.data.user.bio,
+            location: response.data.user.location,
+            latitude: response.data.user.latitude,
+            longitude: response.data.user.longitude,
+          });
+        } else {
+          console.error('Failed to fetch profile data:', response.data.message);
+        }
+      } catch (error) {
+        console.error('Error fetching profile data:', error);
+      }
+    }
+
+    ProfileData();
+  }, []);
+
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    buttonType: 'none',
+    onClose: () => { },
+  });
+    
+  const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttonType,
+      onClose: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        onClose();
+      },
+    });
   };
 
-  const handleChangeProfilePicture = () => {
-    Alert.alert(
-      'Change Profile Picture',
-      'Choose an option',
-      [
-        { text: 'Camera', onPress: () => console.log('Camera selected') },
-        { text: 'Gallery', onPress: () => console.log('Gallery selected') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
+  const handleLogout = () => {
+    showAlert(
+      'Logout',
+      'Are you sure you want to logout?',
+      'error',
+      'double',
+      () => {
+        // Handle logout logic here
+        setTimeout(() => {
+          logout();
+        }, 1000);
+        navigation.navigate('LogIn'); // Navigate to Login screen after logout
+      }
     );
   };
 
@@ -71,6 +149,11 @@ const UserProfileScreen = () => {
     }
   };
 
+  const openMap = () => {
+    const url = `https://www.google.com/maps?q=${profileData.latitude},${profileData.longitude}`;
+    Linking.openURL(url);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Header 
@@ -83,7 +166,6 @@ const UserProfileScreen = () => {
         <View style={styles.imageSection}>
           <TouchableOpacity 
             style={styles.imageContainer}
-            onPress={handleChangeProfilePicture}
             activeOpacity={0.8}
           >
             {renderProfileImage()}
@@ -104,22 +186,22 @@ const UserProfileScreen = () => {
           <ProfileField
             label="Full Name"
             value={profileData.fullName}
-            iconName="person-outline"
-          />
-          <ProfileField
-            label="Username"
-            value={`@${profileData.username}`}
-            iconName="at-outline"
+            iconName="person"
           />
           <ProfileField
             label="Email Address"
             value={profileData.email}
-            iconName="mail-outline"
+            iconName="mail"
           />
           <ProfileField
             label="Phone Number"
             value={profileData.phoneNumber}
-            iconName="call-outline"
+            iconName="call"
+          />
+          <ProfileField
+            label="Bio"
+            value={profileData.bio || "No bio added yet"}
+            iconName="document-text"
             isLast={true}
           />
 
@@ -130,6 +212,28 @@ const UserProfileScreen = () => {
           >
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
+        </FormBox>
+
+        <FormBox style={styles.locationCard}>
+          <View style={styles.cardHeader}>
+            <Icon name="location-outline" size={20} color={Colors.primary} />
+            <Text style={styles.cardTitle}>Location</Text>
+          </View>
+          
+          <ProfileField
+            label="Address"
+            value={profileData.location || "No location set"}
+            iconName="location"
+          />
+          
+          {profileData.latitude && profileData.longitude && (
+            <TouchableOpacity 
+              style={styles.mapButton}
+              onPress={() => openMap()}
+            >
+              <Text style={styles.mapButtonText}>View on Map</Text>
+            </TouchableOpacity>
+          )}
         </FormBox>
 
         <FormBox style={styles.settingsCard}>
@@ -209,15 +313,23 @@ const UserProfileScreen = () => {
             style={styles.logoutButton}
             onPress={handleLogout}
           >
-            <View style={styles.logoutIconContainer}>
-              <Icon name="log-out-outline" size={30} color={Colors.danger} />
-            </View>
+            <Icon name="log-out-outline" size={30} color={Colors.danger} />
             <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
         </FormBox>
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonType={alertConfig.buttonType}
+        onClose={alertConfig.onClose}
+      />
+
     </SafeAreaView>
   );
 };
@@ -233,7 +345,7 @@ const styles = StyleSheet.create({
   },
   imageSection: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 12,
     paddingBottom: 40,
   },
   imageContainer: {
@@ -296,7 +408,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
-    paddingBottom: 12,
+    paddingBottom: 0,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral200,
   },
@@ -364,7 +476,7 @@ const styles = StyleSheet.create({
     height: 10,
   },
   editButtonContainer: {
-    marginTop: 20,
+    marginTop: -0,
     alignSelf: 'flex-end',
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -373,6 +485,26 @@ const styles = StyleSheet.create({
     marginBottom: -10,
   },
   editButtonText: {
+    color: Colors.neutral0,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  locationCard: {
+    marginBottom: 16,
+  },
+  
+  // ADD THIS STYLE FOR THE MAP BUTTON
+  mapButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  mapButtonText: {
     color: Colors.neutral0,
     fontSize: 16,
     fontWeight: '600',

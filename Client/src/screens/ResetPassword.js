@@ -6,10 +6,36 @@ import FormInput from "../components/FormInput";
 import AnimatedButton from "../components/AnimatedButton";
 import Link from "../components/Link";
 import BackButton from "../components/Back";
+import CustomAlert from "../components/CustomAlert";
+import { useNavigation } from '@react-navigation/native';
 
 const ResetPasswordScreen = ({ email = "user@example.com", onResetSuccess, onBack }) => {
+  const navigation = useNavigation();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [alertConfig, setAlertConfig] = useState({
+      visible: false,
+      title: '',
+      message: '',
+      type: 'info',
+      buttonType: 'none',
+      onClose: () => { },
+    });
+      
+    const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
+      setAlertConfig({
+        visible: true,
+        title,
+        message,
+        type,
+        buttonType,
+        onClose: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          onClose();
+        },
+      });
+    };
 
   const getPasswordStrength = (password) => {
     if (password.length === 0) return { strength: "", color: "" };
@@ -21,6 +47,44 @@ const ResetPasswordScreen = ({ email = "user@example.com", onResetSuccess, onBac
     return { strength: "Good", color: "#3B82F6" };
   };
 
+  const ResetPassword = async () => {
+    try {
+      if (newPassword !== confirmPassword) {
+        showAlert(
+          'Passwords mismatch',
+          'The new password and confirm password do not match.',
+          'warning',
+          'none',
+        );
+      }else{
+        const results = await axios.post(`${BASE_URL}/users/reset-password`, {
+          newPassword,
+          confirmPassword,
+        })
+        if(results.data.success) {
+          showAlert(
+            'Password Reset Successful',
+            'Your password has been reset successfully.',
+            'success',
+            'none',
+          );
+        }
+        else{
+          showAlert(
+            'Password Reset Failed',
+            results.data.message || 'An error occurred while resetting your password.',
+            'error',
+            'none',
+          );
+        }
+      }
+    }
+    catch (err) {
+      console.error("Error resetting password:", err);
+      alert("Failed to reset password. Please try again.");
+    }
+  }
+
   const passwordStrength = getPasswordStrength(newPassword);
   const passwordsMatch = newPassword && confirmPassword && newPassword === confirmPassword;
 
@@ -28,7 +92,7 @@ const ResetPasswordScreen = ({ email = "user@example.com", onResetSuccess, onBac
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Header */}
-        <BackButton onPress={onBack} />
+        <BackButton onPress={} />
 
         <View style={styles.iconContainer}>
           <Image source={require('../assets/logo_dark_no_bg_no_name.png')} style={styles.Logo} />
@@ -108,19 +172,22 @@ const ResetPasswordScreen = ({ email = "user@example.com", onResetSuccess, onBac
           {/* Reset Button */}
           <AnimatedButton
             title="Reset Password"
-            onPress={onResetSuccess}
+            onPress={ResetPassword}
             disabled={!passwordsMatch || newPassword.length < 8}
           />
         </FormBox>
 
-        {/* Back to Login */}
-        <View style={styles.loginContainer}>
-          <Text style={styles.loginText}>Remember your password? </Text>
-          <TouchableOpacity>
-            <Link link="Back to Login" />
-          </TouchableOpacity>
-        </View>
       </View>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonType={alertConfig.buttonType}
+        onClose={alertConfig.onClose}
+      />
+
     </SafeAreaView>
   );
 };

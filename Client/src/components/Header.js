@@ -1,4 +1,4 @@
-import React from 'react';
+import {React, useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -10,16 +10,38 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import Colors from '../constants/colors';
 import { useNavigation } from '@react-navigation/native';
 import { Platform } from 'react-native';
+import { BASE_URL } from '../API/key';
+import axios from 'axios';
 
 const Header = ({
   icon = 'back',
   onIconPress,
   showNotification = true,
   style,
-  name,
-  image,
 }) => {
+  const [fullName, setFullName] = useState('');
+  const [image, setImage] = useState(null);
   const navigation = useNavigation();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/users/Header`);
+        if (response.data.success) {
+          const user = response.data.user;
+          // console.log('User header data:', user);
+          setFullName(user.fullName);
+          setImage(user.profile_image);
+        } else {
+          console.error('Failed to fetch user header:', response.data.message);
+        }
+      } catch (error) {
+        console.error('Error rendering data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const renderLeftIcon = () => {
     if (icon !== 'back') return null;
@@ -55,7 +77,7 @@ const Header = ({
           onPress={() => navigation.navigate('Profile')}
         >
           <Text style={styles.profileInitial}>
-            {name?.charAt(0).toUpperCase()}
+            {fullName?.charAt(0).toUpperCase()}
           </Text>
         </TouchableOpacity>
       );

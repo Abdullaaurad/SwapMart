@@ -1,0 +1,40 @@
+name: Deploy Expo Mobile App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          cd Client
+          npm ci
+
+      - name: Install Expo CLI
+        run: npm install -g expo-cli
+
+      - name: Build Expo app (web)
+        run: |
+          cd Client
+          npx expo build:web
+
+      - name: Publish to Expo
+        if: ${{ secrets.EXPO_TOKEN }}
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          cd Client
+          npx expo login -t $EXPO_TOKEN
+          npx expo publish --non-interactive

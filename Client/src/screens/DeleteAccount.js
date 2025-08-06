@@ -13,6 +13,9 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import Colors from '../constants/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { BASE_URL } from '../API/key';
+import axios from 'axios';
+import CustomAlert from '../components/CustomAlert';
 
 const AccountDelegationPage = () => {
   const navigation = useNavigation();
@@ -21,13 +24,72 @@ const AccountDelegationPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userEmail, setEmail] = useState('Abdullaaurad@gmail.com');
 
+  const delegateAccount = async () => {
+    try {
+      const response = await axios.post(`${BASE_URL}/users/delegate-account`);
+      if (response.data.success) {
+        showAlert(
+          'Delegation Successful',
+          'Your account delegation request has been successfully initiated. Please check your email for further instructions.',
+          'success',
+          'none',
+        )
+      }
+      else{
+        showAlert(
+          'Delegation Failed',
+          response.data.message || 'An error occurred while delegating your account.',
+          'error',
+          'none',
+        );
+      }
+    }
+    catch (error) {
+      console.error('Error delegating account:', error);
+      showAlert(
+        'Delegation Failed',
+        'An error occurred while delegating your account. Please try again later.',
+        'error',
+        'none',
+      );
+    }
+  };
+
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    buttonType: 'none',
+    onClose: () => { },
+  });
+        
+  const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttonType,
+      onClose: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        onClose();
+      },
+    });
+  };
+
   const handleDelegateAccount = () => {
     setShowConfirmModal(true);
   };
 
   const handleConfirmDelegation = () => {
     if (confirmationText.toLowerCase() !== 'delegate my account') {
-      Alert.alert('Error', 'Please type the exact confirmation phrase to proceed.');
+      showAlert(
+        'Invalid Confirmation',
+        'Please type "delegate my account" to confirm the delegation.',
+        'error',
+        'none',
+      )
       return;
     }
 
@@ -35,8 +97,14 @@ const AccountDelegationPage = () => {
     setTimeout(() => {
       setIsLoading(false);
       setShowConfirmModal(false);
-      Alert.alert('Success', 'Account delegation process initiated successfully!');
-    }, 2000);
+      showAlert(
+        'Delegation Initiated',
+        'Your account delegation request has been initiated. Please check your email for further instructions.',
+        'success',
+        'none',
+      );
+    }, 1000);
+    delegateAccount
   };
 
   const consequences = [
@@ -256,6 +324,16 @@ const AccountDelegationPage = () => {
           </View>
         </View>
       </Modal>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonType={alertConfig.buttonType}
+        onClose={alertConfig.onClose}
+      />
+
     </SafeAreaView>
   );
 };

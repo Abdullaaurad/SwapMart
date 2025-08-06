@@ -126,7 +126,6 @@ const SwapMartHomePage = () => {
       
       <Header 
         icon=""
-        name="Abdulla"
       />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
