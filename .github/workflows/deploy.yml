@@ -3,6 +3,7 @@ name: Deploy Expo Mobile App
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -17,7 +18,21 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install dependencies
+      # --- Backend steps ---
+      - name: Install backend dependencies
+        run: |
+          cd Server
+          npm ci
+
+      - name: Run backend tests (optional)
+        run: |
+          cd Server
+          npm test || echo "No tests"
+
+      # You can add deployment steps here if you deploy to Heroku, Railway, etc.
+
+      # --- Frontend steps ---
+      - name: Install frontend dependencies
         run: |
           cd Client
           npm ci
