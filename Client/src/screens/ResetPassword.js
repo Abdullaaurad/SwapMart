@@ -1,5 +1,14 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, 
+  Text, 
+  StyleSheet, 
+  SafeAreaView, 
+  TouchableOpacity, 
+  Image,
+  Keyboard,
+  Platform,
+  KeyboardAvoidingView
+} from "react-native";
 import Colors from "../constants/colors";
 import FormBox from "../components/FormBox";
 import FormInput from "../components/FormInput";
@@ -8,11 +17,28 @@ import Link from "../components/Link";
 import BackButton from "../components/Back";
 import CustomAlert from "../components/CustomAlert";
 import { useNavigation } from '@react-navigation/native';
+import axios from "axios";
+import { BASE_URL } from "../constants/api";
 
-const ResetPasswordScreen = ({ email = "user@example.com", onResetSuccess, onBack }) => {
+const ResetPassword = () => {
   const navigation = useNavigation();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+    useEffect(() => {
+      const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+        setKeyboardVisible(true);
+      });
+      const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+        setKeyboardVisible(false);
+      });
+  
+      return () => {
+        keyboardDidHideListener?.remove();
+        keyboardDidShowListener?.remove();
+      };
+    }, []);
 
   const [alertConfig, setAlertConfig] = useState({
       visible: false,
@@ -81,7 +107,12 @@ const ResetPasswordScreen = ({ email = "user@example.com", onResetSuccess, onBac
     }
     catch (err) {
       console.error("Error resetting password:", err);
-      alert("Failed to reset password. Please try again.");
+      showAlert(
+        'Error',
+        'An error occurred while resetting your password. Please try again later.',
+        'error',
+        'none',
+      );
     }
   }
 
@@ -90,18 +121,28 @@ const ResetPasswordScreen = ({ email = "user@example.com", onResetSuccess, onBac
 
   return (
     <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
       <View style={styles.content}>
         {/* Header */}
-        <BackButton onPress={} />
+        <BackButton onPress={() => navigation.navigate('Profile')} />
 
-        <View style={styles.iconContainer}>
-          <Image source={require('../assets/logo_dark_no_bg_no_name.png')} style={styles.Logo} />
-        </View>
+        {!isKeyboardVisible && (
+          <View style={styles.iconContainer}>
+            <Image source={require('../assets/logo_dark_no_bg_no_name.png')} style={styles.Logo} />
+          </View>
+        )}
 
-        {/* Title and Description */}
-        <Text style={styles.title}>Reset Password</Text>
-        <Text style={styles.subtitle}>Create a new password for your account</Text>
-        <Text style={styles.emailText}>{email}</Text>
+        {!isKeyboardVisible && (
+          <>
+            {/* Title and Description */}
+            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.subtitle}>Create a new password for your account</Text>
+          </>
+        )}
 
         <FormBox>
           {/* New Password Input */}
@@ -176,8 +217,8 @@ const ResetPasswordScreen = ({ email = "user@example.com", onResetSuccess, onBac
             disabled={!passwordsMatch || newPassword.length < 8}
           />
         </FormBox>
-
       </View>
+      </KeyboardAvoidingView>
 
       <CustomAlert
         visible={alertConfig.visible}
@@ -196,6 +237,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primarybg,
+  },
+  keyboardView: {
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -227,7 +271,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.neutral500,
     textAlign: "center",
-    marginBottom: 4,
+    marginBottom: 30,
   },
   emailText: {
     fontSize: 16,
@@ -290,4 +334,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ResetPasswordScreen;
+export default ResetPassword;

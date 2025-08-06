@@ -20,12 +20,15 @@ import { useNavigation } from '@react-navigation/native';
 const EditProfileScreen = () => {
   const navigation = useNavigation();
   const [profileData, setProfileData] = useState({
-    username: "john_doe",
-    email: "johndoe@email.com",
-    fullName: "John Doe",
-    phoneNumber: "+94 71 481 0928",
+    username: "",
+    email: "",
+    fullname: "",
+    phoneNumber: "",
     profileImage: "",
-    bio: "Software developer passionate about mobile apps and user experience.",
+    bio: "",
+    location: '',
+    latitude: null,
+    longitude: null,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -49,49 +52,138 @@ const EditProfileScreen = () => {
     }
   }, [contact]);
 
+  useEffect(() => {
+    const ProfileData = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/users/Profile`);
+        // console.log('Profile Data:', response.data);
+        if (response.data.success) {
+          setProfileData({
+            email: response.data.user.email,
+            fullName: response.data.user.fullName,
+            phoneNumber: response.data.user.phone,
+            profileImage: response.data.user.profile_image || '',
+            bio: response.data.user.bio,
+            location: response.data.user.location,
+            latitude: response.data.user.latitude,
+            longitude: response.data.user.longitude,
+          });
+        } else {
+          console.error('Failed to fetch profile data:', response.data.message);
+        }
+      } catch (error) {
+        console.error('Error fetching profile data:', error);
+      }
+    }
+
+    ProfileData();
+  }, []);
+
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    buttonType: 'none',
+    onClose: () => { },
+  });
+    
+  const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttonType,
+      onClose: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        onClose();
+      },
+    });
+  };
+
   const handleEmailVerify = () => {
     if (verificationStatus.email) {
       setVerificationStatus((prev) => ({ ...prev, email: false }));
-      Alert.alert("Email Reset", "You can now enter a new email address and verify it.");
+      showAlert(
+        'Email Reset',
+        'You can now enter a new email address and verify it.',
+        'info',
+        'none',
+      )
       return;
     }
 
     if (!email.trim()) {
-      Alert.alert("Email Required", "Please enter your email address first.");
-      return;
+      showAlert(
+        'Email Required',
+        'Please enter your email address first.',
+        'warning',
+        'none',
+      );
     }
 
     if (!email.includes("@") || !email.includes(".")) {
-      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      showAlert(
+        'Invalid Email',
+        'Please enter a valid email address.',
+        'warning',
+        'none',
+      );
       return;
     }
 
     setTimeout(() => {
       setVerificationStatus((prev) => ({ ...prev, email: true }));
-      Alert.alert("Email Verified", "Your email has been successfully verified.");
+      showAlert(
+        'Email Verified',
+        'Your email address has been successfully verified.',
+        'success',
+        'none',
+      );
     }, 1000);
   };
 
   const handleContactVerify = () => {
     if (verificationStatus.contact) {
       setVerificationStatus((prev) => ({ ...prev, contact: false }));
-      Alert.alert("Contact Reset", "You can now enter a new contact number and verify it.");
+      showAlert(
+        'Contact Reset',
+        'You can now enter a new contact number and verify it.',
+        'info',
+        'none',
+      );
       return;
     }
 
     if (!contact.trim()) {
-      Alert.alert("Contact Required", "Please enter your contact number first.");
+      showAlert(
+        'Contact Required',
+        'Please enter your contact number first.',
+        'warning',
+        'none',
+      );
       return;
     }
 
     if (contact.length < 10) {
-      Alert.alert("Invalid Contact", "Please enter a valid contact number.");
+      showAlert(
+        'Invalid Contact',
+        'Please enter a valid contact number.',
+        'warning',
+        'none',
+      );
       return;
     }
 
     setTimeout(() => {
       setVerificationStatus((prev) => ({ ...prev, contact: true }));
-      Alert.alert("Contact Verified", "Your contact number has been successfully verified.");
+      showAlert(
+        'Contact Verified',
+        'Your contact number has been successfully verified.',
+        'success',
+        ' none',
+      );
     }, 1000);
   };
 
@@ -130,28 +222,53 @@ const EditProfileScreen = () => {
 
   const handleSave = async () => {
     if (!hasChanges) {
-      Alert.alert("No Changes", "No changes were made to save.");
+      showAlert(
+        'No Changes',
+        'No changes were made to your profile.',
+        'info',
+        'none',
+      );
       return;
     }
 
     if (!profileData.fullName.trim()) {
-      Alert.alert("Error", "Full name is required.");
+      showAlert(
+        'Full Name Required',
+        'Please enter your full name.',
+        'warning',
+        'none',
+      );
       return;
     }
 
     if (!email.trim()) {
-      Alert.alert("Error", "Email is required.");
+      showAlert(
+        'Email Required',
+        'Please enter your email address.',
+        'warning',
+        'none',
+      );
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("Error", "Please enter a valid email address.");
+      showAlert(
+        'Invalid Email',
+        'Please enter a valid email address.',
+        'warning',
+        'none',
+      );
       return;
     }
 
     if (!verificationStatus.email || !verificationStatus.contact) {
-      Alert.alert("Verification Required", "Please verify both email and contact before saving.");
+      showAlert(
+        'Verification Required',
+        'Please verify your email and contact number before saving.',
+        'warning',
+        'none',
+      );
       return;
     }
 
@@ -247,7 +364,7 @@ const EditProfileScreen = () => {
             placeholder="Enter your email"
             iconName="mail-outline"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => handleInputChange("email", text)}
             autoCapitalize="none"
             keyboardType="email-address"
           />
@@ -258,7 +375,7 @@ const EditProfileScreen = () => {
             placeholder="Enter your contact"
             iconName="call-outline"
             value={contact}
-            onChangeText={setContact}
+            onChangeText={(text) => handleInputChange("phoneNumber", text)}
             keyboardType="phone-pad"
           />
           <VerificationRow

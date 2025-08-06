@@ -75,7 +75,7 @@ class User {
 
   static async getUserProfile(userId) {
     const result = await db.query(
-      'SELECT username, fullName, email, phone, profile_image, bio, location, latitude, longitude FROM users WHERE id = $1',
+      'SELECT username, fullname, email, phone, profile_image, bio, location, latitude, longitude FROM users WHERE id = $1',
       [userId]
     );
     return result.rows[0] || null;

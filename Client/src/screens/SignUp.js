@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   SafeAreaView,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import Colors from '../constants/colors';
 import AnimatedButton from '../components/AnimatedButton';
@@ -31,6 +34,7 @@ const SignUpScreen = ({
   const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
@@ -40,6 +44,21 @@ const SignUpScreen = ({
     buttonType: 'none',
     onClose: () => { },
   });
+
+  // Listen for keyboard events
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidHideListener?.remove();
+      keyboardDidShowListener?.remove();
+    };
+  }, []);
 
   const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
     setAlertConfig({
@@ -55,7 +74,6 @@ const SignUpScreen = ({
     });
   };
 
-  // Clear errors when user starts typing
   const handleUsernameChange = (text) => {
     setUsername(text);
     if (usernameError) {
@@ -151,67 +169,92 @@ const SignUpScreen = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Logo */}
-        <View style={styles.iconContainer}>
-          <Image source={require('../assets/logo_dark_no_bg_no_name.png')} style={styles.Logo} />
-        </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <View style={styles.content}>
+          {/* Logo - Hide when keyboard is visible */}
+          {!isKeyboardVisible && (
+            <View style={styles.iconContainer}>
+              <Image
+                source={require('../assets/logo_dark_no_bg_no_name.png')}
+                style={styles.Logo}
+              />
+            </View>
+          )}
 
-        {/* Welcome Text */}
-        <Text style={styles.welcomeTitle}>Create Account</Text>
-        <Text style={styles.welcomeSubtitle}>Sign up for a new car account</Text>
+          {/* Welcome Text - Hide when keyboard is visible */}
+          {!isKeyboardVisible && (
+            <>
+              <Text style={styles.welcomeTitle}>Create Account</Text>
+              <Text style={styles.welcomeSubtitle}>Sign up for a new car account</Text>
+            </>
+          )}
 
-        <FormBox>
-          <FormInput
-            label="Username"
-            placeholder="Choose a username"
-            iconName="person-outline"
-            value={username}
-            onChangeText={handleUsernameChange}
-            autoCapitalize="none"
-            autoCorrect={false}
-            error={usernameError}
-          />
+          <FormBox>
+            {/* Username Input */}
+            <FormInput
+              label="Username"
+              placeholder="Choose a username"
+              iconName="person-outline"
+              value={username}
+              onChangeText={handleUsernameChange}
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={usernameError}
+            />
 
-          <FormInput
-            label="Password"
-            placeholder="Enter your password"
-            iconName="lock-closed-outline"
-            value={password}
-            onChangeText={handlePasswordChange}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            error={passwordError}
-          />
+            {/* Password Input */}
+            <FormInput
+              label="Password"
+              placeholder="Enter your password"
+              iconName="lock-closed-outline"
+              value={password}
+              onChangeText={handlePasswordChange}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={passwordError}
+            />
 
-          <AnimatedButton 
-            title={isLoading ? 'Signing Up...' : 'Sign Up'} 
-            onPress={handleSignUp} 
-            style={{ marginBottom: 24 }}
-            loading={isLoading}
-          />
+            {/* Sign Up Button */}
+            <AnimatedButton
+              title={isLoading ? 'Signing Up...' : 'Sign Up'}
+              onPress={handleSignUp}
+              style={{ marginBottom: 24 }}
+              loading={isLoading}
+            />
 
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Or sign up with</Text>
-            <View style={styles.dividerLine} />
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>Or sign up with</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Social Login Buttons */}
+            <SocialLoginButtons
+              onGoogleLogin={onGoogleLogin}
+              onAppleLogin={onAppleLogin}
+            />
+          </FormBox>
+
+          {/* Sign Up Link */}
+          <View style={styles.signUpContainer}>
+            <Text style={styles.signUpText}>Already have an account? </Text>
+            <TouchableOpacity
+              onPress={() => {
+                navigation.navigate('LogIn');
+              }}
+            >
+              <Link link="LogIn" style={{ marginTop: 2 }}/>
+            </TouchableOpacity>
           </View>
-
-          <SocialLoginButtons
-            onGoogleLogin={onGoogleLogin}
-            onAppleLogin={onAppleLogin}
-          />
-        </FormBox>
-
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('LogIn')}>
-            <Link link="LogIn" style={{ marginTop: 2 }} />
-          </TouchableOpacity>
         </View>
-      </View>
-      
+      </KeyboardAvoidingView>
+
       <CustomAlert
         visible={alertConfig.visible}
         title={alertConfig.title}
@@ -228,6 +271,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primarybg,
+  },
+  keyboardView: {
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -259,7 +305,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.neutral500,
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 30,
   },
   dividerContainer: {
     flexDirection: 'row',

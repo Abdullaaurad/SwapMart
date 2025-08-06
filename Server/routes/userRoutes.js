@@ -11,5 +11,6 @@ router.post('/onboard', authenticateToken, validateOnboarding, userController.on
 router.get('/Header', authenticateToken, userController.getUserHeader)
 router.get('/Profile', authenticateToken, userController.getUserProfile)
 router.post('/Logout', authenticateToken, userController.logoutUser);
+router.post('/reset-password', authenticateToken, userController.resetPassword);
 
 module.exports = router;

@@ -24,7 +24,7 @@ jobs:
           cd Server
           npm ci
 
-      - name: Run backend tests (optional)
+      - name: Run backend tests  
         run: |
           cd Server
           npm test || echo "No tests"
