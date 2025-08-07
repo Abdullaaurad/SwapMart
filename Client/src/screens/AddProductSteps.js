@@ -16,6 +16,7 @@ import Colors from '../constants/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
 import BottomNavigation from '../components/BottomNav';
+import CustomAlert from '../components/CustomAlert';
 
 const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
   const [errors, setErrors] = useState({});
@@ -249,16 +250,66 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
   const maxImages = 8;
   const [activeTab, setActiveTab] = useState('home');
 
+    const [alertConfig, setAlertConfig] = useState({
+      visible: false,
+      title: '',
+      message: '',
+      type: 'info',
+      buttonType: 'single',
+      confirmText: 'OK',
+      cancelText: 'Cancel',
+      option1Text: 'Option 1',
+      option2Text: 'Option 2',
+      onClose: () => {},
+      onCancel: () => {},
+      onOption1: () => {},
+      onOption2: () => {},
+    });
+
+  const showAlert = (config) => {
+    setAlertConfig({
+      visible: true,
+      title: config.title || '',
+      message: config.message || '',
+      type: config.type || 'info',
+      buttonType: config.buttonType || 'single',
+      confirmText: config.confirmText || 'OK',
+      cancelText: config.cancelText || 'Cancel',
+      option1Text: config.option1Text || 'Option 1',
+      option2Text: config.option2Text || 'Option 2',
+      onClose: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        config.onClose && config.onClose();
+      },
+      onCancel: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        config.onCancel && config.onCancel();
+      },
+      onOption1: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        config.onOption1 && config.onOption1();
+      },
+      onOption2: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        config.onOption2 && config.onOption2();
+      },
+    });
+  };
+
   const openImagePicker = () => {
-    Alert.alert(
-      'Add Photo',
-      'Choose how you want to add a photo',
-      [
-        { text: 'Camera', onPress: () => pickFromCamera() },
-        { text: 'Gallery', onPress: () => pickFromGallery() },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    showAlert({
+      title: 'Add Photo',
+      message: 'Choose how you want to add a photo',
+      type: 'info',
+      buttonType: 'double',
+      confirmText: 'Camera',
+      cancelText: 'Gallery',
+      onOption1: () => pickFromCamera(),
+      onOption2: () => pickFromGallery(),
+      onClose: () => {
+        // Handle close if needed
+      },
+    })
   };
 
   const pickFromCamera = () => {
@@ -296,7 +347,12 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
 
   const handleNext = () => {
     if (data.images.length === 0) {
-      Alert.alert('Photos Required', 'Please add at least one photo of your item');
+      showAlert({
+        title: 'Photos Required',
+        message: 'Please add at least one photo of your item to continue.',
+        type: 'warning',
+        buttonType: 'none',
+      })
       return;
     }
     onNext();
@@ -432,6 +488,7 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
 const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
   const [errors, setErrors] = useState({});
   const [newWantedItem, setNewWantedItem] = useState('');
+  const [newWantedItemDesc, setNewWantedItemDesc] = useState('');
   const [activeTab, setActiveTab] = useState('home');
 
   const categories = [
@@ -488,14 +545,19 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
   };
 
   const addWantedItem = () => {
-    if (newWantedItem.trim() && !data.wantedItems.includes(newWantedItem.trim())) {
-      onUpdate({ wantedItems: [...data.wantedItems, newWantedItem.trim()] });
+    if (newWantedItem.trim() && !data.wantedItems.some(item => item.name === newWantedItem.trim())) {
+      const newItem = {
+        name: newWantedItem.trim(),
+        description: newWantedItemDesc.trim() || null
+      };
+      onUpdate({ wantedItems: [...data.wantedItems, newItem] });
       setNewWantedItem('');
+      setNewWantedItemDesc('');
     }
   };
 
   const removeWantedItem = (itemToRemove) => {
-    onUpdate({ wantedItems: data.wantedItems.filter(item => item !== itemToRemove) });
+    onUpdate({ wantedItems: data.wantedItems.filter(item => item.name !== itemToRemove) });
   };
 
   return (
@@ -538,11 +600,25 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
                 <Ionicons name="add" size={24} color={Colors.surface} />
               </TouchableOpacity>
             </View>
+            
+            <TextInput
+              style={[styles.addItemInput, { marginTop: 8 }]}
+              placeholder="Optional description..."
+              value={newWantedItemDesc}
+              onChangeText={setNewWantedItemDesc}
+              multiline
+              numberOfLines={2}
+            />
 
             {data.wantedItems.map((item, index) => (
               <View key={index} style={styles.wantedItem}>
-                <Text style={styles.wantedItemText}>{item}</Text>
-                <TouchableOpacity onPress={() => removeWantedItem(item)}>
+                <View style={styles.wantedItemContent}>
+                  <Text style={styles.wantedItemText}>{item.name}</Text>
+                  {item.description && (
+                    <Text style={styles.wantedItemDesc}>{item.description}</Text>
+                  )}
+                </View>
+                <TouchableOpacity onPress={() => removeWantedItem(item.name)}>
                   <Ionicons name="close" size={20} color={Colors.danger} />
                 </TouchableOpacity>
               </View>
@@ -917,7 +993,12 @@ const SwapPreview = ({ data, onSubmit, onBack, onEdit }) => {
           <View style={styles.previewCard}>
             <Text style={styles.wantedTitle}>Looking for:</Text>
             {data.wantedItems.map((item, index) => (
-              <Text key={index} style={styles.wantedItem}>• {item}</Text>
+              <View key={index} style={styles.wantedItemPreview}>
+                <Text style={styles.wantedItemPreviewText}>• {item.name}</Text>
+                {item.description && (
+                  <Text style={styles.wantedItemPreviewDesc}>  {item.description}</Text>
+                )}
+              </View>
             ))}
 
             {data.wantedCategory && (
@@ -1453,6 +1534,14 @@ const styles = StyleSheet.create({
     color: Colors.text,
     flex: 1,
   },
+  wantedItemContent: {
+    flex: 1,
+  },
+  wantedItemDesc: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
   textArea: {
     borderWidth: 1,
     borderColor: Colors.border,
@@ -1615,6 +1704,18 @@ const styles = StyleSheet.create({
     color: Colors.surface,
     fontWeight: '600',
     marginRight: 8,
+  },
+  wantedItemPreview: {
+    marginBottom: 4,
+  },
+  wantedItemPreviewText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  wantedItemPreviewDesc: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
   },
 });
 

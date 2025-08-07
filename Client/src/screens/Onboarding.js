@@ -32,7 +32,7 @@ const OnboardingScreen = ({ route }) => {
   
   const [userId, setUserId] = useState(null);
   const [jwtToken, setJwtToken] = useState(null);
-  const [fullname, setFullName] = useState("");
+  const [fullname, setfullname] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
@@ -368,7 +368,7 @@ const OnboardingScreen = ({ route }) => {
                       placeholder="Enter your full name"
                       iconName="person-outline"
                       value={fullname}
-                      onChangeText={setFullName}
+                      onChangeText={setfullname}
                     />
 
                     <FormInput

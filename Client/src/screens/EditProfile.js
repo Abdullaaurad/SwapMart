@@ -8,6 +8,7 @@ import {
   Alert,
   Image,
   ScrollView,
+  Platform,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import Colors from "../constants/colors";
@@ -15,7 +16,15 @@ import FormBox from "../components/FormBox";
 import Header from "../components/Header";
 import FormInput from "../components/FormInput";
 import VerificationRow from "../components/Verification";
+import CustomAlert from "../components/CustomAlert";
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
+// Add these imports for camera and gallery functionality
+import * as ImagePicker from 'expo-image-picker';
+import { Camera } from 'expo-camera';
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
@@ -33,51 +42,73 @@ const EditProfileScreen = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const [email, setEmail] = useState(profileData.email);
-  const [contact, setContact] = useState(profileData.phoneNumber);
+  const [email, setEmail] = useState('');
+  const [contact, setContact] = useState('');
   const [verificationStatus, setVerificationStatus] = useState({
     email: true,
     contact: true,
   });
 
   useEffect(() => {
-    if (verificationStatus.email) {
-      setVerificationStatus((prev) => ({ ...prev, email: true }));
-    }
-  }, [email]);
-
-  useEffect(() => {
-    if (verificationStatus.contact) {
-      setVerificationStatus((prev) => ({ ...prev, contact: true }));
-    }
-  }, [contact]);
-
-  useEffect(() => {
     const ProfileData = async () => {
       try {
         const response = await axios.get(`${BASE_URL}/users/Profile`);
-        // console.log('Profile Data:', response.data);
         if (response.data.success) {
+          const userData = response.data.user;
           setProfileData({
-            email: response.data.user.email,
-            fullName: response.data.user.fullName,
-            phoneNumber: response.data.user.phone,
-            profileImage: response.data.user.profile_image || '',
-            bio: response.data.user.bio,
-            location: response.data.user.location,
-            latitude: response.data.user.latitude,
-            longitude: response.data.user.longitude,
+            username: userData.username || '',
+            email: userData.email || '',
+            fullname: userData.fullname || '',
+            phoneNumber: userData.phone || '',
+            profileImage: userData.profile_image || '',
+            bio: userData.bio || '',
+            location: userData.location || '',
+            latitude: userData.latitude,
+            longitude: userData.longitude,
           });
+          setEmail(userData.email || '');
+          setContact(userData.phone || '');
         } else {
           console.error('Failed to fetch profile data:', response.data.message);
         }
       } catch (error) {
         console.error('Error fetching profile data:', error);
+        showAlert(
+          'Error',
+          'Failed to load profile data. Please try again.',
+          'error',
+          'none',
+        );
       }
     }
 
     ProfileData();
   }, []);
+
+  // Request permissions on component mount
+  useEffect(() => {
+    requestPermissions();
+  }, []);
+
+  const requestPermissions = async () => {
+    try {
+      // Request camera permission
+      const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
+      
+      // Request media library permission
+      const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (cameraStatus !== 'granted') {
+        console.warn('Camera permission not granted');
+      }
+      
+      if (mediaStatus !== 'granted') {
+        console.warn('Media library permission not granted');
+      }
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+    }
+  };
 
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
@@ -121,6 +152,7 @@ const EditProfileScreen = () => {
         'warning',
         'none',
       );
+      return;
     }
 
     if (!email.includes("@") || !email.includes(".")) {
@@ -182,7 +214,7 @@ const EditProfileScreen = () => {
         'Contact Verified',
         'Your contact number has been successfully verified.',
         'success',
-        ' none',
+        'none',
       );
     }, 1000);
   };
@@ -195,21 +227,34 @@ const EditProfileScreen = () => {
     setHasChanges(true);
   };
 
+  const handleLocationChange = (location) => {
+    handleInputChange('location', location);
+  };
+
+  const openMapForLocation = () => {
+    if (profileData.latitude && profileData.longitude) {
+      const url = `https://www.google.com/maps?q=${profileData.latitude},${profileData.longitude}`;
+      Linking.openURL(url);
+    } else {
+      showAlert(
+        'No Location',
+        'No location coordinates available to view on map.',
+        'warning',
+        'none',
+      );
+    }
+  };
+
+  // Updated function with actual camera and gallery functionality
   const handleChangeProfilePicture = () => {
     Alert.alert("Change Profile Picture", "Choose an option", [
       {
         text: "Camera",
-        onPress: () => {
-          console.log("Camera selected");
-          handleInputChange("profileImage", "https://via.placeholder.com/150");
-        },
+        onPress: openCamera,
       },
       {
         text: "Gallery",
-        onPress: () => {
-          console.log("Gallery selected");
-          handleInputChange("profileImage", "https://via.placeholder.com/150/0000FF/FFFFFF");
-        },
+        onPress: openGallery,
       },
       {
         text: "Remove Photo",
@@ -218,6 +263,94 @@ const EditProfileScreen = () => {
       },
       { text: "Cancel", style: "cancel" },
     ]);
+  };
+
+  const openCamera = async () => {
+    try {
+      // Check camera permission
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        showAlert(
+          'Permission Required',
+          'Camera permission is required to take photos. Please enable it in your device settings.',
+          'warning',
+          'none',
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        handleInputChange("profileImage", imageUri);
+        showAlert(
+          'Success',
+          'Profile picture updated successfully!',
+          'success',
+          'none',
+        );
+      }
+    } catch (error) {
+      console.error('Error opening camera:', error);
+      showAlert(
+        'Error',
+        'Failed to open camera. Please try again.',
+        'error',
+        'none',
+      );
+    }
+  };
+
+  const openGallery = async () => {
+    try {
+      // Check media library permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        showAlert(
+          'Permission Required',
+          'Gallery access permission is required to select photos. Please enable it in your device settings.',
+          'warning',
+          'none',
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        handleInputChange("profileImage", imageUri);
+        showAlert(
+          'Success',
+          'Profile picture updated successfully!',
+          'success',
+          'none',
+        );
+      }
+    } catch (error) {
+      console.error('Error opening gallery:', error);
+      showAlert(
+        'Error',
+        'Failed to open gallery. Please try again.',
+        'error',
+        'none',
+      );
+    }
   };
 
   const handleSave = async () => {
@@ -231,7 +364,7 @@ const EditProfileScreen = () => {
       return;
     }
 
-    if (!profileData.fullName.trim()) {
+    if (!profileData.fullname.trim()) {
       showAlert(
         'Full Name Required',
         'Please enter your full name.',
@@ -275,18 +408,45 @@ const EditProfileScreen = () => {
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      Alert.alert("Success", "Profile updated successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
+      const updateData = {
+        email: email,
+        phone: contact,
+        profile_image: profileData.profileImage,
+        bio: profileData.bio,
+        location: profileData.location,
+        latitude: profileData.latitude,
+        longitude: profileData.longitude,
+      };
+
+      const response = await axios.put(`${BASE_URL}/users/update-profile`, updateData);
+      
+      if (response.data.success) {
+        showAlert(
+          'Success',
+          'Profile updated successfully!',
+          'success',
+          'none',
+          () => {
             setHasChanges(false);
-            console.log("Navigate back to profile");
-          },
-        },
-      ]);
+            navigation.navigate('Profile');
+          }
+        );
+      } else {
+        showAlert(
+          'Error',
+          response.data.message || 'Failed to update profile.',
+          'error',
+          'none',
+        );
+      }
     } catch (error) {
-      Alert.alert("Error", "Failed to update profile. Please try again.");
+      console.error('Error updating profile:', error);
+      showAlert(
+        'Error',
+        'Failed to update profile. Please try again.',
+        'error',
+        'none',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -299,11 +459,11 @@ const EditProfileScreen = () => {
         {
           text: "Discard",
           style: "destructive",
-          onPress: () => console.log("Navigate back without saving"),
+          onPress: () => navigation.navigate('Profile'),
         },
       ]);
     } else {
-      console.log("Navigate back");
+      navigation.navigate('Profile');
     }
   };
 
@@ -344,8 +504,8 @@ const EditProfileScreen = () => {
             label="Full Name"
             placeholder="Enter your full name"
             iconName="person-outline"
-            value={profileData.fullName}
-            onChangeText={(text) => handleInputChange("fullName", text)}
+            value={profileData.fullname}
+            onChangeText={(text) => handleInputChange("fullname", text)}
           />
 
           <FormInput
@@ -364,7 +524,7 @@ const EditProfileScreen = () => {
             placeholder="Enter your email"
             iconName="mail-outline"
             value={email}
-            onChangeText={(text) => handleInputChange("email", text)}
+            onChangeText={(text) => setEmail(text)}
             autoCapitalize="none"
             keyboardType="email-address"
           />
@@ -375,15 +535,49 @@ const EditProfileScreen = () => {
             placeholder="Enter your contact"
             iconName="call-outline"
             value={contact}
-            onChangeText={(text) => handleInputChange("phoneNumber", text)}
+            onChangeText={(text) => setContact(text)}
             keyboardType="phone-pad"
           />
           <VerificationRow
             type="contact"
             isVerified={verificationStatus.contact}
             onVerify={handleContactVerify}
-            style={{ marginBottom: -10 }}
+            style={{ marginBottom: 10 }}
           />
+
+          <FormInput
+            label="Bio"
+            placeholder="Tell us about yourself"
+            iconName="document-text-outline"
+            value={profileData.bio}
+            onChangeText={(text) => handleInputChange("bio", text)}
+            multiline={true}
+            numberOfLines={3}
+          />
+        </FormBox>
+
+        <FormBox style={styles.locationCard}>
+          <View style={styles.cardHeader}>
+            <Icon name="location-outline" size={20} color={Colors.primary} />
+            <Text style={styles.cardTitle}>Location</Text>
+          </View>
+
+          <FormInput
+            label="Address"
+            placeholder="Enter your address"
+            iconName="location-outline"
+            value={profileData.location}
+            onChangeText={(text) => handleLocationChange(text)}
+          />
+
+          {profileData.latitude && profileData.longitude && (
+            <TouchableOpacity 
+              style={styles.mapButton}
+              onPress={openMapForLocation}
+            >
+              <Text style={styles.mapButtonText}>View Current Location on Map</Text>
+            </TouchableOpacity>
+          )}
         </FormBox>
 
         <View style={styles.buttonContainer}>
@@ -400,6 +594,15 @@ const EditProfileScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonType={alertConfig.buttonType}
+        onClose={alertConfig.onClose}
+      />
     </SafeAreaView>
   );
 };
@@ -460,7 +663,10 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   formCard: {
-    marginBottom: 40,
+    marginBottom: 16,
+  },
+  locationCard: {
+    marginBottom: 16,
   },
   cardHeader: {
     flexDirection: "row",
@@ -508,6 +714,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: Colors.neutral0,
+  },
+  mapButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mapButtonText: {
+    color: Colors.neutral0,
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
 

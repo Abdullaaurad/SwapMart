@@ -17,10 +17,14 @@ const CustomAlert = ({
   message, 
   onClose, 
   type = 'info', // 'success', 'error', 'warning', 'info'
-  buttonType = 'single', // 'none', 'single', 'double'
+  buttonType = 'single', // 'none', 'single', 'double', 'triple'
   onCancel,
+  onOption1,
+  onOption2,
   confirmText = 'OK',
   cancelText = 'Cancel',
+  option1Text = 'Option 1',
+  option2Text = 'Option 2',
   autoDismiss = false, // Auto dismiss after 2 seconds when buttonType is 'none'
   autoDismissDelay = 1000
 }) => {
@@ -64,6 +68,45 @@ const CustomAlert = ({
   const renderButtons = () => {
     if (buttonType === 'none') {
       return null;
+    }
+
+    if (buttonType === 'triple') {
+      return (
+        <View style={styles.buttonContainer}>
+          {/* Cancel Button - Full width on top */}
+          <TouchableOpacity
+            style={[styles.button, styles.cancelButton, styles.fullWidthButton]}
+            onPress={onCancel || onClose}
+          >
+            <Text style={styles.cancelButtonText}>{cancelText}</Text>
+          </TouchableOpacity>
+          
+          {/* Option buttons - Side by side */}
+          <View style={styles.optionButtonsRow}>
+            <TouchableOpacity
+              style={[
+                styles.button, 
+                styles.option1Button,
+                { backgroundColor: getAlertColor() }
+              ]}
+              onPress={onOption1 || onClose}
+            >
+              <Text style={styles.confirmButtonText}>{option1Text}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.button, 
+                styles.option2Button,
+                { backgroundColor: Colors.secondary || '#6B7280' }
+              ]}
+              onPress={onOption2 || onClose}
+            >
+              <Text style={styles.confirmButtonText}>{option2Text}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
     }
 
     return (
@@ -190,12 +233,9 @@ const styles = StyleSheet.create({
     marginBottom: 0, // Remove bottom margin when no buttons
   },
   buttonContainer: {
-    flexDirection: 'row',
     width: '100%',
-    gap: 12,
   },
   button: {
-    flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -205,6 +245,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     backgroundColor: '#3B82F6',
+    flex: 1,
   },
   confirmButtonWithCancel: {
     flex: 1,
@@ -213,6 +254,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: Colors.neutral300 || '#D1D5DB',
+  },
+  fullWidthButton: {
+    width: '100%',
+    marginBottom: 12,
+  },
+  optionButtonsRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  option1Button: {
+    flex: 1,
+  },
+  option2Button: {
+    flex: 1,
   },
   confirmButtonText: {
     color: 'white',

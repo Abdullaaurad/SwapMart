@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const { validateSignUp, validateLogin, validateOnboarding } = require('../middleware/validation');
+const { validateSignUp, validateLogin, validateOnboarding, validateProfileUpdate } = require('../middleware/validation');
 const { authenticateToken } = require('../middleware/auth');
 
 router.post('/signup', validateSignUp, userController.createUser);
@@ -10,7 +10,9 @@ router.post('/login', validateLogin, userController.loginUser);
 router.post('/onboard', authenticateToken, validateOnboarding, userController.onboardUser);
 router.get('/Header', authenticateToken, userController.getUserHeader)
 router.get('/Profile', authenticateToken, userController.getUserProfile)
+router.put('/update-profile', authenticateToken, validateProfileUpdate, userController.updateProfile);
 router.post('/Logout', authenticateToken, userController.logoutUser);
 router.post('/reset-password', authenticateToken, userController.resetPassword);
+router.post('/delegate-account', authenticateToken, userController.delegateAccount);
 
 module.exports = router;

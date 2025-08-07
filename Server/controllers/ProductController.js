@@ -10,7 +10,7 @@ exports.getAllProducts = async (req, res) => {
       products: products
     });
   } catch (err) {
-    console.error('Error fetching products:', err);
+    console.error('Error fetching swaps:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -18,39 +18,58 @@ exports.getAllProducts = async (req, res) => {
   }
 }
 
-exports.getProductById = async (req, res) => {
+exports.getProductsById = async (req, res) => {
   const productId = req.params.id;
   try {
-    const product = await Product.findById(productId);
-    if (!product) {
+    const products = await Product.findById(productId);
+    if (!swap) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Swap not found'
       });
     }
-    return res.status(200).json({
-      success: true,
-      product: product
-    });
-  } catch (err) {
-    console.error('Error fetching product:', err);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-}
-
-exports.getMyProducts = async (req, res) => {
-  const userId = req.user.id; // Get userId from authenticated token
-  try {
-    const products = await Product.findBySeller(userId);
     return res.status(200).json({
       success: true,
       products: products
     });
   } catch (err) {
-    console.error('Error fetching user products:', err);
+    console.error('Error fetching swap:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+exports.getMyProductsListings = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const products = await Product.findByUserlistings(userId);
+    console.log("products:",  products);
+    return res.status(200).json({
+      success: true,
+      products: products
+    });
+  } catch (err) {
+    console.error('Error fetching user swaps:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+exports.getListingHistory = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const products = await Product.findByUserlistings(userId);
+    console.log("products:",  products);
+    return res.status(200).json({
+      success: true,
+      products: products
+    });
+  } catch (err) {
+    console.error('Error fetching user swaps:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -59,32 +78,63 @@ exports.getMyProducts = async (req, res) => {
 }
 
 exports.createProduct = async (req, res) => {
-  const { name, description, price, category } = req.body;
   const userId = req.user.id; // Get userId from authenticated token
+  const {
+    title, description, category, condition, originalPrice, tags, images,
+    wantedItems, wantedCategory, wantedCondition, wantedPriceRange,
+    additionalNotes, swapPreference, negotiable, location
+  } = req.body;
 
-  if (!name || !description || !price || !category) {
+  // Validation
+  if (!title || !description || !category || !condition) {
     return res.status(400).json({
       success: false,
-      message: 'All fields are required'
+      message: 'Title, description, category, and condition are required'
+    });
+  }
+
+  if (!wantedItems || wantedItems.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'At least one wanted item is required'
     });
   }
 
   try {
-    const newProduct = new Product({
-      name,
-      description,
-      price,
-      category,
-      owner: userId
-    });
+    // Transform wanted items to match database structure
+    const wantedItemsFormatted = wantedItems.map((item, index) => ({
+      name: item,
+      description: null,
+      priority: index + 1
+    }));
 
-    await newProduct.save();
+    const swapData = {
+      user_id: userId,
+      title,
+      description,
+      category_id: category,
+      condition,
+      original_price: originalPrice || null,
+      tags: tags || [],
+      images: images || [],
+      wanted_category_id: wantedCategory || null,
+      wanted_condition: wantedCondition || null,
+      wanted_price_range: wantedPriceRange || null,
+      additional_notes: additionalNotes || null,
+      swap_preference: swapPreference || 'local',
+      negotiable: negotiable !== undefined ? negotiable : true,
+      location: location || null,
+      wanted_items: wantedItemsFormatted
+    };
+
+    const newProduct = await Product.create(swapData);
+
     return res.status(201).json({
       success: true,
       product: newProduct
     });
   } catch (err) {
-    console.error('Error creating product:', err);
+    console.error('Error creating swap:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -94,37 +144,43 @@ exports.createProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   const productId = req.params.id;
-  const { name, description, price, category } = req.body;
-  const userId = req.user.id; // Get userId from authenticated token
+  const userId = req.user.id;
+  const updateData = req.body;
 
   try {
-    const product = await Product.findById(productId);
+    const product = await Product.findById(swapId);
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Swap not found'
       });
     }
 
-    if (product.owner.toString() !== userId) {
+    if (product.user_id !== userId) {
       return res.status(403).json({
         success: false,
-        message: 'You do not have permission to update this product'
+        message: 'You do not have permission to update this swap'
       });
     }
 
-    product.name = name || product.name;
-    product.description = description || product.description;
-    product.price = price || product.price;
-    product.category = category || product.category;
+    // Transform wanted items if provided
+    if (updateData.wantedItems) {
+      updateData.wanted_items = updateData.wantedItems.map((item, index) => ({
+        name: item,
+        description: null,
+        priority: index + 1
+      }));
+      delete updateData.wantedItems;
+    }
 
-    await product.save();
+    const updatedSwap = await roduct.update(productId, updateData);
+
     return res.status(200).json({
       success: true,
-      product: product
+      product: updatedSwap
     });
   } catch (err) {
-    console.error('Error updating product:', err);
+    console.error('Error updating swap:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -134,65 +190,56 @@ exports.updateProduct = async (req, res) => {
 
 exports.deleteProduct = async (req, res) => {
   const productId = req.params.id;
-  const userId = req.user.id; // Get userId from authenticated token
+  const userId = req.user.id;
 
   try {
-    const product = await Product.findById(productId);
-    if (!product) {
+    const swap = await Swap.findById(productId);
+    if (!swap) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Swap not found'
       });
     }
 
-    if (product.owner.toString() !== userId) {
+    if (swap.user_id !== userId) {
       return res.status(403).json({
         success: false,
-        message: 'You do not have permission to delete this product'
+        message: 'You do not have permission to delete this swap'
       });
     }
 
-    await Product.delete(productId);
+    await Product.delete(swapId);
     return res.status(200).json({
       success: true,
-      message: 'Product deleted successfully'
+      message: 'Swap deleted successfully'
     });
   } catch (err) {
-    console.error('Error deleting product:', err);
+    console.error('Error deleting swap:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
     });
   }
-}   
-
-exports.soledProducts = async (req, res) => {
-    const userId = req.user.id; // Get userId from authenticated token
-    try {
-        const products = await Product.markAsUnavailable(true);
-        return res.status(200).json({
-        success: true,
-        products: products
-        });
-    } catch (err) {
-        console.error('Error fetching sold products:', err);
-        return res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-        });
-    }
 }
 
-exports.deleteAllUserProducts = async (req, res) => {
-  const userId = req.user.id; // Get userId from authenticated token
+exports.searchProducts = async (req, res) => {
+  const { q, limit = 20, offset = 0 } = req.query;
+  
+  if (!q) {
+    return res.status(400).json({
+      success: false,
+      message: 'Search query is required'
+    });
+  }
+
   try {
-    await Product.deleteMany({ owner: userId });
+    const products = await Product.search(q, parseInt(limit), parseInt(offset));
     return res.status(200).json({
       success: true,
-      message: 'All products deleted successfully'
+      products: products
     });
   } catch (err) {
-    console.error('Error deleting all user products:', err);
+    console.error('Error searching swaps:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -200,3 +247,22 @@ exports.deleteAllUserProducts = async (req, res) => {
   }
 }
 
+exports.getProductsByCategory = async (req, res) => {
+  const categoryId = req.params.categoryId;
+  const limit = parseInt(req.query.limit) || 20;
+  const offset = parseInt(req.query.offset) || 0;
+
+  try {
+    const products = await Product.findByCategory(categoryId, limit, offset);
+    return res.status(200).json({
+      success: true,
+      products: products
+    });
+  } catch (err) {
+    console.error('Error fetching swaps by category:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+} 

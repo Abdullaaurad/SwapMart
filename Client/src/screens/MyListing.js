@@ -1,5 +1,4 @@
-// MyListingsPage.js - Items currently listed for swap
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,61 +9,58 @@ import {
   StatusBar,
   FlatList,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../constants/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
+import axios from 'axios';
+import {BASE_URL} from '../API/key';
 
 const MyListingsPage = () => {
   const navigation = useNavigation();
   const [activeFilter, setActiveFilter] = useState('all');
+  const [myListings, setMyListings] = useState([]); // Use state instead of constant
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const myListings = [
-    {
-      id: 1,
-      title: 'Samsung Galaxy S23',
-      price: '$750',
-      originalPrice: '$899',
-      condition: 'Excellent',
-      image: require('../assets/phone.jpeg'),
-      views: 245,
-      likes: 18,
-      offers: 5,
-      status: 'active',
-      listedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      category: 'Electronics'
-    },
-    {
-      id: 2,
-      title: 'Vintage Leather Jacket',
-      price: '$180',
-      originalPrice: '$250',
-      condition: 'Good',
-      image: require('../assets/Leather-Jacket.jpeg'),
-      views: 89,
-      likes: 12,
-      offers: 2,
-      status: 'active',
-      listedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      category: 'Fashion'
-    },
-    {
-      id: 3,
-      title: 'Gaming Console',
-      price: '$450',
-      originalPrice: '$500',
-      condition: 'Like New',
-      image: require('../assets/console.jpeg'),
-      views: 156,
-      likes: 24,
-      offers: 8,
-      status: 'pending',
-      listedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      category: 'Electronics'
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${BASE_URL}/products/my-listings`);
+        if(response.data.success){
+          console.log('Fetched listings:', response.data.swaps);
+          setMyListings(response.data.swaps); // Set state properly
+        } else {
+          setError('Failed to fetch listings');
+        }
+      }
+      catch (error) {
+        console.error('Error fetching listings:', error);
+        setError('Error fetching listings');
+      } finally {
+        setLoading(false);
+      }
     }
-  ];
+    fetchListings();
+  }, []);
+
+  // Filter listings based on active filter
+  const getFilteredListings = () => {
+    switch (activeFilter) {
+      case 'active':
+        return myListings.filter(item => item.status === 'active');
+      case 'pending':
+        return myListings.filter(item => item.status === 'pending');
+      default:
+        return myListings;
+    }
+  };
+
+  const filteredListings = getFilteredListings();
 
   const filterOptions = [
     { key: 'all', label: 'All', count: myListings.length },
@@ -72,47 +68,128 @@ const MyListingsPage = () => {
     { key: 'pending', label: 'Pending', count: myListings.filter(item => item.status === 'pending').length }
   ];
 
+  // Function to get the first image from the images array
+  const getImageSource = (images) => {
+    if (images && images.length > 0) {
+      // If images is an array of objects with url property
+      if (typeof images[0] === 'object' && images[0].url) {
+        return { uri: images[0].url };
+      }
+      // If images is an array of strings
+      if (typeof images[0] === 'string') {
+        return { uri: images[0] };
+      }
+    }
+    // Return a placeholder image if no images available
+    return { uri: 'https://via.placeholder.com/150' };
+  };
+
   const renderListingItem = ({ item }) => (
     <TouchableOpacity style={styles.listingCard}>
-      <Image source={item.image} style={styles.listingImage} />
+      <Image 
+        source={getImageSource(item.images)} 
+        style={styles.listingImage}
+        defaultSource={{ uri: 'https://via.placeholder.com/150' }}
+      />
       
       <View style={styles.listingContent}>
         <View style={styles.listingHeader}>
-          <Text style={styles.listingTitle}>{item.title}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: item.status === 'active' ? Colors.success : Colors.warning }]}>
+          <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
+          <View style={[
+            styles.statusBadge, 
+            { backgroundColor: item.status === 'active' ? Colors.success : Colors.warning }
+          ]}>
             <Text style={styles.statusText}>{item.status}</Text>
           </View>
         </View>
         
-        <Text style={styles.listingPrice}>{item.price}</Text>
+        <Text style={styles.listingPrice}>${item.original_price}</Text>
         <Text style={styles.listingCondition}>Condition: {item.condition}</Text>
+        <Text style={styles.listingLocation} numberOfLines={1}>📍 {item.location}</Text>
         
         <View style={styles.listingStats}>
           <View style={styles.statGroup}>
             <Ionicons name="eye" size={14} color={Colors.textSecondary} />
-            <Text style={styles.statText}>{item.views}</Text>
+            <Text style={styles.statText}>{item.view_count || 0}</Text>
           </View>
           <View style={styles.statGroup}>
-            <Ionicons name="heart" size={14} color={Colors.danger} />
-            <Text style={styles.statText}>{item.likes}</Text>
+            <Ionicons name="pricetag" size={14} color={Colors.primary} />
+            <Text style={styles.statText}>{item.category_name}</Text>
           </View>
           <View style={styles.statGroup}>
-            <Ionicons name="mail" size={14} color={Colors.primary} />
-            <Text style={styles.statText}>{item.offers} offers</Text>
+            <Ionicons name="time" size={14} color={Colors.textSecondary} />
+            <Text style={styles.statText}>
+              {new Date(item.created_at).toLocaleDateString()}
+            </Text>
           </View>
         </View>
         
         <View style={styles.listingActions}>
-          <TouchableOpacity style={[styles.actionBtn, styles.editBtn]}>
+          <TouchableOpacity 
+            style={[styles.actionBtn, styles.editBtn]}
+            onPress={() => {
+              // Navigate to edit screen with item data
+              navigation.navigate('EditListing', { listingId: item.id });
+            }}
+          >
             <Text style={styles.editBtnText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, styles.viewBtn]}>
-            <Text style={styles.viewBtnText}>View Offers</Text>
+          <TouchableOpacity 
+            style={[styles.actionBtn, styles.viewBtn]}
+            onPress={() => {
+              // Navigate to offers screen
+              navigation.navigate('ViewOffers', { listingId: item.id });
+            }}
+          >
+            <Text style={styles.viewBtnText}>View Details</Text>
           </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
   );
+
+  // Show loading state
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header 
+          icon="back"
+          name="My Listings"
+          onIconPress={() => navigation.goBack()}
+        />
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading your listings...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header 
+          icon="back"
+          name="My Listings"
+          onIconPress={() => navigation.goBack()}
+        />
+        <View style={styles.centerContainer}>
+          <Ionicons name="alert-circle" size={48} color={Colors.danger} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => {
+              setError(null);
+              fetchListings();
+            }}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -148,14 +225,29 @@ const MyListingsPage = () => {
         ))}
       </ScrollView>
 
-      <FlatList
-        data={myListings}
-        renderItem={renderListingItem}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.listingsList}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.chatListContent}
-      />
+      {filteredListings.length > 0 ? (
+        <FlatList
+          data={filteredListings}
+          renderItem={renderListingItem}
+          keyExtractor={(item) => item.id.toString()}
+          style={styles.listingsList}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.chatListContent}
+        />
+      ) : (
+        <View style={styles.centerContainer}>
+          <Ionicons name="list" size={48} color={Colors.textSecondary} />
+          <Text style={styles.emptyText}>
+            {activeFilter === 'all' ? 'No listings found' : `No ${activeFilter} listings`}
+          </Text>
+          <TouchableOpacity 
+            style={styles.createButton}
+            onPress={() => navigation.navigate('CreateListing')}
+          >
+            <Text style={styles.createButtonText}>Create Your First Listing</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -164,6 +256,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+  errorText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: Colors.danger,
+    textAlign: 'center',
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: Colors.surface,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  createButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+  },
+  createButtonText: {
+    color: Colors.surface,
+    fontSize: 16,
+    fontWeight: '600',
   },
   listContent: {
     padding: 16,
@@ -224,9 +363,11 @@ const styles = StyleSheet.create({
   },
   listingsList: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   chatListContent: {
     flexGrow: 1,
+    paddingVertical: 16,
   },
   listingCard: {
     backgroundColor: Colors.surface,
@@ -236,12 +377,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     flexDirection: 'row',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   listingImage: {
     width: 80,
     height: 80,
     borderRadius: 8,
     marginRight: 16,
+    backgroundColor: Colors.neutral50,
   },
   listingContent: {
     flex: 1,
@@ -279,16 +429,24 @@ const styles = StyleSheet.create({
   listingCondition: {
     fontSize: 12,
     color: Colors.textSecondary,
+    marginBottom: 4,
+    textTransform: 'capitalize',
+  },
+  listingLocation: {
+    fontSize: 12,
+    color: Colors.textSecondary,
     marginBottom: 8,
   },
   listingStats: {
     flexDirection: 'row',
     marginBottom: 12,
+    flexWrap: 'wrap',
   },
   statGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 16,
+    marginBottom: 4,
   },
   statText: {
     fontSize: 12,

@@ -14,7 +14,7 @@ class User {
 
   static async getUserHeader(userId){
     const result = await db.query(
-      'SELECT fullName , profile_image, FROM users WHERE id = $1',
+      'SELECT fullname, profile_image FROM users WHERE id = $1',
       [userId]
     );
     return result.rows[0] || null;
@@ -111,6 +111,22 @@ class User {
       [hashedPassword, userId]
     );
     return "success";
+  }
+
+  static async delegateAccount(userId) {
+    const result = await db.query(
+      'DELETE FROM Users where id = $1 RETURNING *',
+      [userId]
+    );
+    if (result.rows.length === 0) {
+      throw new Error('User not found');
+    }
+    const deleteProducts = await db.query(
+      'DELETE FROM products WHERE user_id = $1',
+      [userId]
+    );
+
+    return result.rows[0];
   }
 }
 

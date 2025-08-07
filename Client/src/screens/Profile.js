@@ -26,7 +26,7 @@ const UserProfileScreen = () => {
   const [profileData, setProfileData] = useState({
     username: '',
     email: '',
-    fullName: '',
+    fullname: '',
     phoneNumber: '',
     profileImage: '', // Empty string means no image
     bio: '',
@@ -70,7 +70,7 @@ const UserProfileScreen = () => {
         if (response.data.success) {
           setProfileData({
             email: response.data.user.email,
-            fullName: response.data.user.fullName,
+            fullname: response.data.user.fullname,
             phoneNumber: response.data.user.phone,
             profileImage: response.data.user.profile_image || '',
             bio: response.data.user.bio,
@@ -172,7 +172,7 @@ const UserProfileScreen = () => {
           </TouchableOpacity>
           
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{profileData.fullName}</Text>
+            <Text style={styles.userName}>{profileData.fullname}</Text>
             <Text style={styles.userEmail}>{profileData.email}</Text>
           </View>
         </View>
@@ -185,7 +185,7 @@ const UserProfileScreen = () => {
 
           <ProfileField
             label="Full Name"
-            value={profileData.fullName}
+            value={profileData.fullname}
             iconName="person"
           />
           <ProfileField

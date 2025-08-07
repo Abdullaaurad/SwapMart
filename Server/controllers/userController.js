@@ -165,6 +165,68 @@ exports.onboardUser = async (req, res) => {
   }
 };
 
+exports.updateProfile = async (req, res) => {
+  const { email, phone, profile_image, bio, location, latitude, longitude } = req.body;
+  const userId = req.user.id;
+  console.log('Updating profile for user ID:', userId);
+
+  try {
+    // Validate required fields
+    if (!email || !phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and phone number are required'
+      });
+    }
+
+    // Check if user exists (already verified by auth middleware)
+    const existingUser = await User.findById(userId);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update user profile
+    const updatedUser = await User.updateProfile(userId, {
+      email,
+      phone,
+      profile_image,
+      bio,
+      location,
+      latitude,
+      longitude
+    });
+
+    console.log('Profile updated successfully for user:', updatedUser.username);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        profile_image: updatedUser.profile_image,
+        bio: updatedUser.bio,
+        location: updatedUser.location,
+        latitude: updatedUser.latitude,
+        longitude: updatedUser.longitude,
+        onboard: updatedUser.onboard
+      }
+    });
+
+  } catch (err) {
+    console.error('Profile update error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 exports.getUserHeader = async (req, res) => {
   const userId = req.user.id; // Get userId from authenticated token
   console.log('Fetching header for user ID:', userId);
@@ -185,7 +247,7 @@ exports.getUserHeader = async (req, res) => {
       success: true,
       user: {
         id: user.id,
-        fullName: user.fullName,
+        fullname: user.fullname,
         profile_image: user.profile_image,
       }
     });
@@ -219,7 +281,7 @@ exports.getUserProfile = async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
-        fullName: user.fullname,
+        fullname: user.fullname,
         email: user.email,
         phone: user.phone,
         profile_image: user.profile_image,
@@ -291,6 +353,31 @@ exports.resetPassword = async (req, res) => {
 
   } catch (err) {
     console.error('Error resetting password:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+exports.delegateAccount = async (req, res) => {
+  const userId = req.user.id; // Get userId from authenticated token
+  console.log('Delegating account for user ID:', userId);
+
+  try {
+    // Delegate account logic (this is a placeholder, implement as needed)
+    const result = await User.delegateAccount(userId);
+    
+    console.log('Account delegated successfully for user:', userId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Account delegated successfully',
+      result
+    });
+
+  } catch (err) {
+    console.error('Error delegating account:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

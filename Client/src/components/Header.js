@@ -19,7 +19,7 @@ const Header = ({
   showNotification = true,
   style,
 }) => {
-  const [fullName, setFullName] = useState('');
+  const [fullname, setfullname] = useState('');
   const [image, setImage] = useState(null);
   const navigation = useNavigation();
 
@@ -30,7 +30,7 @@ const Header = ({
         if (response.data.success) {
           const user = response.data.user;
           // console.log('User header data:', user);
-          setFullName(user.fullName);
+          setfullname(user.fullname);
           setImage(user.profile_image);
         } else {
           console.error('Failed to fetch user header:', response.data.message);
@@ -77,7 +77,7 @@ const Header = ({
           onPress={() => navigation.navigate('Profile')}
         >
           <Text style={styles.profileInitial}>
-            {fullName?.charAt(0).toUpperCase()}
+            {fullname?.charAt(0).toUpperCase()}
           </Text>
         </TouchableOpacity>
       );

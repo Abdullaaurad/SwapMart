@@ -18,7 +18,8 @@ import BackButton from "../components/Back";
 import CustomAlert from "../components/CustomAlert";
 import { useNavigation } from '@react-navigation/native';
 import axios from "axios";
-import { BASE_URL } from "../constants/api";
+import { BASE_URL } from "../API/key";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ResetPassword = () => {
   const navigation = useNavigation();
@@ -94,6 +95,11 @@ const ResetPassword = () => {
             'success',
             'none',
           );
+          AsyncStorage.removeItem('jwt_token');
+          asyncStorage.remove();
+          setTimeout(() => {
+            navigation.navigate('Login');
+          }, 1000);
         }
         else{
           showAlert(
