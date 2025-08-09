@@ -34,17 +34,6 @@ const SearchBar = ({
             onChangeText={onChangeText}
           />
         </View>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={onFilterPress}
-          accessibilityLabel="Open filters"
-        >
-          <Ionicons
-            name="filter-outline"
-            size={20}
-            color={Colors.textSecondary}
-          />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -69,7 +58,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     paddingHorizontal: 12,
-    marginRight: 12,
   },
   searchIcon: {
     marginRight: 8,

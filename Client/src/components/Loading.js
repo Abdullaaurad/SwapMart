@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Animated, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../constants/colors';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-export default function LoadingScreen() {
+export default function LoadingComponent({ 
+  size = 'large', 
+  showText = true, 
+  loadingText = 'Loading',
+  style 
+}) {
   const cog1Rotation = useRef(new Animated.Value(0)).current;
   const cog2Rotation = useRef(new Animated.Value(0)).current;
   const [dotCount, setDotCount] = useState(0);
@@ -55,8 +59,37 @@ export default function LoadingScreen() {
 
   const generateDots = () => '.'.repeat(dotCount);
 
+  const getSizeStyles = () => {
+    switch (size) {
+      case 'small':
+        return {
+          cogSize: 50,
+          fontSize: 18,
+          dotsWidth: 25,
+          cog2Offset: { marginTop: 43, marginLeft: -9 }
+        };
+      case 'medium':
+        return {
+          cogSize: 75,
+          fontSize: 22,
+          dotsWidth: 35,
+          cog2Offset: { marginTop: 65, marginLeft: -14 }
+        };
+      case 'large':
+      default:
+        return {
+          cogSize: 100,
+          fontSize: 28,
+          dotsWidth: 45,
+          cog2Offset: { marginTop: 87, marginLeft: -18 }
+        };
+    }
+  };
+
+  const sizeStyles = getSizeStyles();
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, style]}>
       <View style={styles.icons}>
         <Animated.View
           style={[
@@ -64,40 +97,49 @@ export default function LoadingScreen() {
             { transform: [{ rotate: cog1RotationDegrees }] },
           ]}
         >
-          <Icon name="cog" style={styles.cog1} size={100} />
+          <Icon name="cog" style={styles.cog1} size={sizeStyles.cogSize} />
         </Animated.View>
 
         <Animated.View
           style={[
             styles.cogContainer,
-            styles.cog2Container,
+            sizeStyles.cog2Offset,
             { transform: [{ rotate: cog2RotationDegrees }] },
           ]}
         >
-          <Icon name="cog" style={styles.cog2} size={100} />
+          <Icon name="cog" style={styles.cog2} size={sizeStyles.cogSize} />
         </Animated.View>
       </View>
 
-      <View style={styles.loadingContainer}>
-        <View style={styles.loadingTextContainer}>
-          <Text style={styles.loading}>Loading</Text>
-          <Text style={styles.dots}>{generateDots()}</Text>
+      {showText && (
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingTextContainer}>
+            <Text style={[styles.loading, { fontSize: sizeStyles.fontSize }]}>
+              {loadingText}
+            </Text>
+            <Text style={[
+              styles.dots, 
+              { 
+                fontSize: sizeStyles.fontSize, 
+                width: sizeStyles.dotsWidth 
+              }
+            ]}>
+              {generateDots()}
+            </Text>
+          </View>
         </View>
-      </View>
-    </SafeAreaView>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: Colors.primarybg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   icons: {
-    marginTop: -100,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -106,10 +148,6 @@ const styles = StyleSheet.create({
   cogContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cog2Container: {
-    marginTop: 87,
-    marginLeft: -18,
   },
   cog1: {
     color: Colors.primary,
@@ -128,14 +166,11 @@ const styles = StyleSheet.create({
   },
   loading: {
     fontWeight: '500',
-    fontSize: 28,
     color: Colors.neutral1000,
   },
   dots: {
     fontWeight: '500',
-    fontSize: 28,
     color: Colors.neutral1000,
-    width: 45,
     textAlign: 'left',
   },
 });

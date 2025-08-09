@@ -38,6 +38,7 @@ import RecentlyViewed from './src/screens/RecentlyViewedPage';
 import ReviewsRatings from './src/screens/ReviewsRatingsPage';
 import SavedItems from './src/screens/SavedItemsPage';
 import SwapHistory from './src/screens/SwapHistory';
+import MyProductDetails from './src/screens/MyProductDetails';
 
 const Stack = createNativeStackNavigator();
 
@@ -87,6 +88,7 @@ export default function App() {
         <Stack.Screen name="ReviewsRatings" component={ReviewsRatings} />
         <Stack.Screen name="SavedItems" component={SavedItems} />
         <Stack.Screen name="SwapHistory" component={SwapHistory} />
+        <Stack.Screen name="MyProductDetails" component={MyProductDetails} />
         
       </Stack.Navigator>
     </NavigationContainer>

@@ -622,17 +622,18 @@ CREATE TABLE IF NOT EXISTS wanted_items (
 
 INSERT INTO wanted_items (product_id, item_name, description, priority)
 VALUES
-  (1, 'Laptop', 'High-performance laptop needed for software development', 1),
-  (1, 'Office Chair', 'Ergonomic chair for long working hours', 2),
-  (2, 'External Monitor', '27-inch 4K monitor for design work', 2),
-  (3, 'Notebook', 'Spiral notebook for taking daily notes', 3),
-  (3, 'Smartphone', 'Latest model with high camera quality', 1);
+  (4, 'Laptop', 'High-performance laptop needed for software development', 1),
+  (4, 'Office Chair', 'Ergonomic chair for long working hours', 2),
+  (5, 'External Monitor', '27-inch 4K monitor for design work', 2),
+  (7, 'Notebook', 'Spiral notebook for taking daily notes', 3),
+  (7, 'Smartphone', 'Latest model with high camera quality', 1);
 
 
 -- Offers table
 CREATE TABLE IF NOT EXISTS offers (
     id SERIAL PRIMARY KEY,
     buyer_id INTEGER REFERENCES users(id),
+    product_id INTEGER REFERENCES products(id),
     offered_item_title VARCHAR(255) NOT NULL,
     offered_item_description TEXT,
     offered_item_images JSONB DEFAULT '[]'::jsonb,
@@ -644,15 +645,16 @@ CREATE TABLE IF NOT EXISTS offers (
 
 INSERT INTO offers (
     buyer_id,
+    product_id,
     offered_item_title,
     offered_item_description,
     offered_item_images,
     message,
     status
 ) VALUES
-(1, 'Used iPhone X', 'A well-kept iPhone X with minor scratches.', '["img1.jpg", "img2.jpg"]', 'Would you like to swap this with your product?', 'pending'),
-(1, 'Bluetooth Speaker', 'Almost new JBL speaker, great sound.', '["jbl1.jpg", "jbl2.jpg"]', 'Interested in a trade?', 'pending'),
-(1, 'Mountain Bike', 'Lightly used mountain bike, great condition.', '["bike1.jpg", "bike2.jpg"]', 'Let me know if you like this.', 'accepted');
+(1, 4,  'Used iPhone X', 'A well-kept iPhone X with minor scratches.', '["img1.jpg", "img2.jpg"]', 'Would you like to swap this with your product?', 'pending'),
+(1, 4, 'Bluetooth Speaker', 'Almost new JBL speaker, great sound.', '["jbl1.jpg", "jbl2.jpg"]', 'Interested in a trade?', 'pending'),
+(1, 4, 'Mountain Bike', 'Lightly used mountain bike, great condition.', '["bike1.jpg", "bike2.jpg"]', 'Let me know if you like this.', 'accepted');
 
 
 -- Messages table

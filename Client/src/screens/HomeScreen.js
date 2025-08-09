@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
   SafeAreaView,
   StatusBar,
   FlatList,
-  Image,
-  Dimensions,
-  Platform
+  Platform,
+  RefreshControl
 } from 'react-native';
 import Colors from '../constants/colors'
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -20,87 +18,192 @@ import BottomNavigation from '../components/BottomNav';
 import SearchBar from '../components/SearchBar';
 import ItemCard from '../components/ItemCard';
 import { useNavigation } from '@react-navigation/native';
-
-const { width } = Dimensions.get('window');
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
+import LoadingComponent from '../components/Loading';
+import CustomAlert from '../components/CustomAlert';
 
 const SwapMartHomePage = () => {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  
+  // Product state
+  const [featuredItems, setFeaturedItems] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMoreData, setHasMoreData] = useState(true);
+  const [categories, setCategories] = useState([]);
 
-  // Sample data
-  const categories = [
-    { id: 1, name: 'Electronics', icon: '📱', color: Colors.primary },
-    { id: 2, name: 'Fashion', icon: '👕', color: Colors.secondary },
-    { id: 3, name: 'Home & Garden', icon: '🏠', color: Colors.success },
-    { id: 4, name: 'Books', icon: '📚', color: Colors.warning },
-    { id: 5, name: 'Sports', icon: '⚽', color: Colors.danger },
-    { id: 6, name: 'Toys', icon: '🧸', color: Colors.premiumText },
-  ];
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    buttonType: 'none',
+    onClose: () => { },
+  });
+  
+  const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttonType,
+      onClose: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        onClose();
+      },
+    });
+  };
 
-  const featuredItems = [
-    {
-      id: 1,
-      title: 'iPhone 14 Pro',
-      price: '$850',
-      originalPrice: '$999',
-      condition: 'Excellent',
-      location: 'New York, NY',
-      image: require('../assets/IPhone14.jpeg'),
-      likes: 45,
-      views: 230,
-      timeAgo: '2h ago',
-      isHot: true,
-    },
-    {
-      id: 2,
-      title: 'Vintage Leather Jacket',
-      price: '$120',
-      originalPrice: '$200',
-      condition: 'Good',
-      location: 'Los Angeles, CA',
-      image: require('../assets/Leather-Jacket.jpeg'),
-      likes: 28,
-      views: 156,
-      timeAgo: '5h ago',
-      isHot: false,
-    },
-    {
-      id: 3,
-      title: 'MacBook Air M2',
-      price: '$950',
-      originalPrice: '$1199',
-      condition: 'Like New',
-      location: 'Chicago, IL',
-      image: require('../assets/Mac.jpeg'),
-      likes: 67,
-      views: 445,
-      timeAgo: '1d ago',
-      isHot: true,
-    },
-    {
-      id: 4,
-      title: 'Designer Handbag',
-      price: '$350',
-      originalPrice: '$580',
-      condition: 'Excellent',
-      location: 'Miami, FL',
-      image: require('../assets/Handbag.jpeg'),
-      likes: 34,
-      views: 189,
-      timeAgo: '3h ago',
-      isHot: false,
-    },
-  ];
+  const getAllCategories = async () => {
+    try {
+      const results = await axios.get(`${BASE_URL}/category/findall`);
+      if (results.data && results.data.success) {
+        setCategories(results.data.categories || []);
+      } else {
+        setCategories([]);
+        showAlert('Error', results.data?.message || 'Failed to fetch categories', 'error');
+      }
+    }
+    catch (error) {
+      setCategories([]);
+      console.error('Error fetching categories:', error);
+      showAlert('Error', error.message, 'error');
+    }
+  };
 
-  const CategoryCard = ({ category }) => (
-    <TouchableOpacity style={styles.categoryCard}>
-      <View style={[styles.categoryIcon, { backgroundColor: `${category.color}15` }]}>
-        <Text style={styles.categoryEmoji}>{category.icon}</Text>
-      </View>
-      <Text style={styles.categoryName}>{category.name}</Text>
-    </TouchableOpacity>
-  );
+  useEffect(() => {
+    getAllCategories();
+  }, []);
+
+  // API Functions
+  const getProducts = async (offset = 0, categoryId = null, search = '', isLoadMore = false) => {
+    if (!isLoadMore) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    try {
+      const params = {
+        offset: offset,
+        limit: 10 // Adjust as needed
+      };
+      
+      if (categoryId) params.categoryId = categoryId;
+      if (search.trim()) params.search = search.trim();
+
+      const result = await axios.get(`${BASE_URL}/products/home`, { params });
+      
+      if (result.data && result.data.success) {
+        const newProducts = result.data.products || [];
+        
+        if (isLoadMore) {
+          setFeaturedItems(prev => [...prev, ...newProducts]);
+        } else {
+          setFeaturedItems(newProducts);
+        }
+        
+        setHasMoreData(newProducts.length === params.limit);
+        setCurrentPage(offset);
+      } else {
+        console.error('API Error:', result.data?.message || 'Unknown error');
+        if (!isLoadMore) {
+          setFeaturedItems([]);
+        }
+      }
+    } catch (error) {
+      console.error('Network Error:', error);
+      if (!isLoadMore) {
+        setFeaturedItems([]);
+      }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Load initial data
+  useEffect(() => {
+    getProducts(0, selectedCategory, searchQuery);
+  }, []);
+
+  // Handle search with debounce
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setCurrentPage(0);
+      getProducts(0, selectedCategory, searchQuery);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, selectedCategory]);
+
+  // Handle category selection
+  const handleCategoryPress = (categoryId) => {
+    setSelectedCategory(categoryId);
+    setCurrentPage(0);
+  };
+
+  // Handle search input
+  const handleSearchChange = (text) => {
+    setSearchQuery(text);
+  };
+
+  // Handle pull to refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setCurrentPage(0);
+    getProducts(0, selectedCategory, searchQuery);
+  }, [selectedCategory, searchQuery]);
+
+  // Handle load more
+  const loadMoreProducts = () => {
+    if (!loadingMore && hasMoreData) {
+      const nextPage = currentPage + 10;
+      getProducts(nextPage, selectedCategory, searchQuery, true);
+    }
+  };
+
+  // Components
+  const CategoryCard = ({ category }) => {
+    const isSelected = selectedCategory === category.id;
+    
+    return (
+      <TouchableOpacity 
+        style={[
+          styles.categoryCard,
+          isSelected && styles.categoryCardSelected
+        ]}
+        onPress={() => handleCategoryPress(category.id)}
+      >
+        <View style={[
+          styles.categoryIcon, 
+          { backgroundColor: `${category.color}15` },
+          isSelected && { backgroundColor: category.color }
+        ]}>
+          <Text style={[
+            styles.categoryEmoji,
+            isSelected && styles.categoryEmojiSelected
+          ]}>
+            {category.icon}
+          </Text>
+        </View>
+        <Text style={[
+          styles.categoryName,
+          isSelected && styles.categoryNameSelected
+        ]}>
+          {category.name}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   const QuickActionButton = ({ icon: Icon, title, subtitle, color, onPress }) => (
     <TouchableOpacity style={styles.quickActionButton} onPress={onPress}>
@@ -116,33 +219,84 @@ const SwapMartHomePage = () => {
 
   const renderFeaturedItem = ({ item, index }) => (
     <View style={[styles.featuredItemWrapper, { marginRight: index % 2 === 0 ? 8 : 0 }]}>
-      <ItemCard item={item} />
+      <ItemCard item={item} onPress={() => navigation.navigate('ProductDetails')} />
     </View>
   );
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <LoadingComponent size="small" showText={false} />
+      </View>
+    );
+  };
+
+  const EmptyState = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="search-outline" size={64} color={Colors.neutral400} />
+      <Text style={styles.emptyStateTitle}>
+        {searchQuery ? 'No items found' : 'No products available'}
+      </Text>
+      <Text style={styles.emptyStateSubtitle}>
+        {searchQuery 
+          ? `Try adjusting your search "${searchQuery}"` 
+          : 'Check back later for new items'
+        }
+      </Text>
+    </View>
+  );
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header icon="" />
+        <LoadingComponent />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
       
-      <Header 
-        icon=""
-      />
+      <Header icon="" />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <SearchBar />
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
+      >
+        <SearchBar 
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+          placeholder="Search for items..."
+        />
 
         {/* Categories */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Categories</Text>
             <TouchableOpacity>
-              <Text style={styles.viewAllText} onPress={() =>navigation.navigate('ViewAllCategories')}>View All</Text>
+              <Text 
+                style={styles.viewAllText} 
+                onPress={() => navigation.navigate('ViewAllCategories')}
+              >
+                View All
+              </Text>
             </TouchableOpacity>
           </View>
           <FlatList
             data={categories}
             renderItem={({ item }) => <CategoryCard category={item} />}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item) => (item.id || 'all').toString()}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesList}
@@ -152,19 +306,41 @@ const SwapMartHomePage = () => {
         {/* Featured Items */}
         <View style={styles.featuredSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Featured Items</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAllText} onPress={() => navigation.navigate('ViewAllFeaturedItems')}>View All</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>
+              {searchQuery 
+                ? `Search Results${selectedCategory ? ` in ${categories.find(c => c.id === selectedCategory)?.name}` : ''}`
+                : selectedCategory 
+                  ? `${categories.find(c => c.id === selectedCategory)?.name} Items`
+                  : 'Featured Items'
+              }
+            </Text>
+            {featuredItems.length > 0 && (
+              <TouchableOpacity>
+                <Text 
+                  style={styles.viewAllText} 
+                  onPress={() => navigation.navigate('ViewAllFeaturedItems')}
+                >
+                  View All
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <FlatList
-            data={featuredItems}
-            renderItem={renderFeaturedItem}
-            keyExtractor={(item) => item.id.toString()}
-            numColumns={2}
-            scrollEnabled={false}
-            columnWrapperStyle={styles.featuredRow}
-          />
+          
+          {featuredItems.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <FlatList
+              data={featuredItems}
+              renderItem={renderFeaturedItem}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={2}
+              scrollEnabled={false}
+              columnWrapperStyle={styles.featuredRow}
+              onEndReached={loadMoreProducts}
+              onEndReachedThreshold={0.1}
+              ListFooterComponent={renderFooter}
+            />
+          )}
         </View>
 
         {/* Quick Actions */}
@@ -192,6 +368,16 @@ const SwapMartHomePage = () => {
       </ScrollView>
 
       <BottomNavigation activeTab={'Home'} onTabPress={setActiveTab} />
+      
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonType={alertConfig.buttonType}
+        onClose={alertConfig.onClose}
+      />
+
     </SafeAreaView>
   );
 };
@@ -233,6 +419,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
+    flex: 1,
   },
   viewAllText: {
     fontSize: 14,
@@ -249,6 +436,9 @@ const styles = StyleSheet.create({
     marginRight: 16,
     width: 80,
   },
+  categoryCardSelected: {
+    transform: [{ scale: 1.05 }],
+  },
   categoryIcon: {
     width: 64,
     height: 64,
@@ -260,11 +450,18 @@ const styles = StyleSheet.create({
   categoryEmoji: {
     fontSize: 32,
   },
+  categoryEmojiSelected: {
+    color: Colors.surface,
+  },
   categoryName: {
     fontSize: 12,
     fontWeight: '500',
     color: Colors.text,
     textAlign: 'center',
+  },
+  categoryNameSelected: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
 
   // Quick Actions Styles
@@ -304,32 +501,31 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
 
-  bottomNav: {
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingBottom: 12,
-  },
-  bottomNavContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  // Empty State
+  emptyState: {
     alignItems: 'center',
-    paddingTop: 8,
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
-  bottomNavItem: {
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+
+  // Footer loader
+  footerLoader: {
+    paddingVertical: 20,
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
   },
-  bottomNavItemActive: {
-    backgroundColor: `${Colors.primary}10`,
-  },
-  bottomNavLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 4,
-  },
+
   bottomSpacing: {
     height: 20,
   },

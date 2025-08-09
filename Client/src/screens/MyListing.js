@@ -18,60 +18,144 @@ import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
 import axios from 'axios';
 import {BASE_URL} from '../API/key';
+import CustomAlert from '../components/CustomAlert';
 
 const MyListingsPage = () => {
   const navigation = useNavigation();
   const [activeFilter, setActiveFilter] = useState('all');
-  const [myListings, setMyListings] = useState([]); // Use state instead of constant
+  const [myListings, setMyListings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchListings = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(`${BASE_URL}/products/my-listings`);
-        if(response.data.success){
-          console.log('Fetched listings:', response.data.swaps);
-          setMyListings(response.data.swaps); // Set state properly
-        } else {
-          setError('Failed to fetch listings');
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    buttonType: 'none',
+    onClose: () => { },
+    onCancel: () => { },
+    confirmText: 'OK',
+    cancelText: 'Cancel',
+  });
+
+  const showAlert = (title, message, type = 'info', buttonType = 'none', onConfirm = () => { }, onCancel = () => { }) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttonType,
+      confirmText: buttonType === 'double' ? 'Delete' : 'OK',
+      cancelText: 'Cancel',
+      onClose: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        if (buttonType === 'double') {
+          onConfirm(); // Only call onConfirm when confirm button is pressed
         }
-      }
-      catch (error) {
-        console.error('Error fetching listings:', error);
-        setError('Error fetching listings');
-      } finally {
-        setLoading(false);
+      },
+      onCancel: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        onCancel(); // Call onCancel when cancel button is pressed
+      },
+    });
+  };
+
+  // Move fetchListings function outside useEffect so it can be reused
+  const fetchListings = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${BASE_URL}/products/my-listings`);
+      if(response.data.success){
+        // console.log('Fetched listings:', response.data.products);
+        // Ensure we always set an array, even if the response is null/undefined
+        setMyListings(response.data.products || []);
+      } else {
+        showAlert('Error', 'Failed to fetch listings', 'error');
+        setMyListings([]); // Set empty array on failure
       }
     }
+    catch (error) {
+      console.error('Error fetching listings:', error);
+      showAlert('Error', error.message, 'error');
+      setMyListings([]); // Set empty array on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletproduct = async (id) => {
+    try{
+      console.log('Deleting product with ID:', id);
+      const response = await axios.delete(`${BASE_URL}/products/${id}`);
+      if(response.data.success){
+        // Filter out the deleted product from myListings
+        setMyListings(prevListings => prevListings.filter(item => item.id !== id));
+        showAlert('Success', 'Listing deleted successfully', 'success', 'single');
+      } else {
+        showAlert('Error', 'Failed to delete listing', 'error');
+      }
+    }
+    catch (error) {
+      console.error('Error deleting listing:', error);
+      showAlert('Error', error.message, 'error');
+    } 
+  }
+
+  const deletepopup = (id) => {
+    showAlert(
+      'Delete Listing',
+      'Are you sure you want to delete this listing? This action cannot be undone.',
+      'error',
+      'double',
+      () => {
+        // This will be called only when confirm/delete button is pressed
+        deletproduct(id);
+      },
+      () => {
+        // This will be called when cancel button is pressed
+        console.log('Delete cancelled');
+      }
+    );
+  } 
+
+  useEffect(() => {
     fetchListings();
   }, []);
 
   // Filter listings based on active filter
   const getFilteredListings = () => {
+    // Ensure myListings is always an array before filtering
+    const listings = Array.isArray(myListings) ? myListings : [];
+    
     switch (activeFilter) {
       case 'active':
-        return myListings.filter(item => item.status === 'active');
+        return listings.filter(item => item.status === 'active');
       case 'pending':
-        return myListings.filter(item => item.status === 'pending');
+        return listings.filter(item => item.status === 'pending');
+      case 'swaped':
+        return listings.filter(item => item.status === 'swaped');
       default:
-        return myListings;
+        return listings;
     }
   };
 
   const filteredListings = getFilteredListings();
 
+  // Ensure myListings is an array before using filter/length methods
+  const safeListings = Array.isArray(myListings) ? myListings : [];
+
   const filterOptions = [
-    { key: 'all', label: 'All', count: myListings.length },
-    { key: 'active', label: 'Active', count: myListings.filter(item => item.status === 'active').length },
-    { key: 'pending', label: 'Pending', count: myListings.filter(item => item.status === 'pending').length }
+    { key: 'all', label: 'All', count: safeListings.length },
+    { key: 'active', label: 'Active', count: safeListings.filter(item => item.status === 'active').length },
+    { key: 'pending', label: 'Pending', count: safeListings.filter(item => item.status === 'pending').length },
+    { key: 'swaped', label: 'Swaped', count: safeListings.filter(item => item.status === 'swaped').length }
   ];
 
   // Function to get the first image from the images array
   const getImageSource = (images) => {
     if (images && images.length > 0) {
       // If images is an array of objects with url property
+      // console.log('Images:', images);
       if (typeof images[0] === 'object' && images[0].url) {
         return { uri: images[0].url };
       }
@@ -125,20 +209,19 @@ const MyListingsPage = () => {
         </View>
         
         <View style={styles.listingActions}>
-          <TouchableOpacity 
-            style={[styles.actionBtn, styles.editBtn]}
-            onPress={() => {
-              // Navigate to edit screen with item data
-              navigation.navigate('EditListing', { listingId: item.id });
-            }}
-          >
-            <Text style={styles.editBtnText}>Edit</Text>
-          </TouchableOpacity>
+          {item.status === 'active' && (
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.deleteBtn]}
+              onPress={() => deletepopup(item.id)}
+            >
+              <Text style={styles.deleteBtnText}>Delete</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity 
             style={[styles.actionBtn, styles.viewBtn]}
             onPress={() => {
               // Navigate to offers screen
-              navigation.navigate('ViewOffers', { listingId: item.id });
+              navigation.navigate('MyProductDetails', { productId: item.id });
             }}
           >
             <Text style={styles.viewBtnText}>View Details</Text>
@@ -146,6 +229,24 @@ const MyListingsPage = () => {
         </View>
       </View>
     </TouchableOpacity>
+  );
+
+  // Empty state component for better reusability
+  const EmptyState = ({ title, subtitle, showCreateButton = false }) => (
+    <View style={styles.centerContainer}>
+      <Ionicons name="list-outline" size={64} color={Colors.textSecondary} />
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptySubtitle}>{subtitle}</Text>
+      {showCreateButton && (
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={() => navigation.navigate('AddProduct')}
+        >
+          <Ionicons name="add" size={20} color={Colors.surface} style={styles.createButtonIcon} />
+          <Text style={styles.createButtonText}>Create Your First Listing</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 
   // Show loading state
@@ -165,32 +266,6 @@ const MyListingsPage = () => {
     );
   }
 
-  // Show error state
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header 
-          icon="back"
-          name="My Listings"
-          onIconPress={() => navigation.goBack()}
-        />
-        <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle" size={48} color={Colors.danger} />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={() => {
-              setError(null);
-              fetchListings();
-            }}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <Header 
@@ -199,33 +274,52 @@ const MyListingsPage = () => {
         onIconPress={() => navigation.goBack()}
       />
 
-      <SearchBar />
+      <SearchBar/>
 
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
-        contentContainerStyle={styles.filtersContent}
-      >
-        {filterOptions.map(filter => (
-          <TouchableOpacity
-            key={filter.key}
-            style={[styles.filterButton, activeFilter === filter.key && styles.activeFilter]}
-            onPress={() => setActiveFilter(filter.key)}
-          >
-            <Text style={[styles.filterText, activeFilter === filter.key && styles.activeFilterText]}>
-              {filter.label}
-            </Text>
-            <View style={[styles.filterBadge, activeFilter === filter.key && styles.activeFilterBadge]}>
-              <Text style={[styles.filterBadgeText, activeFilter === filter.key && styles.activeFilterBadgeText]}>
-                {filter.count}
+      {/* Only show filters if there are listings */}
+      {safeListings.length > 0 && (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.filtersContainer}
+          contentContainerStyle={styles.filtersContent}
+        >
+          {filterOptions.map(filter => (
+            <TouchableOpacity
+              key={filter.key}
+              style={[styles.filterButton, activeFilter === filter.key && styles.activeFilter]}
+              onPress={() => setActiveFilter(filter.key)}
+            >
+              <Text style={[styles.filterText, activeFilter === filter.key && styles.activeFilterText]}>
+                {filter.label}
               </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <View style={[styles.filterBadge, activeFilter === filter.key && styles.activeFilterBadge]}>
+                <Text style={[styles.filterBadgeText, activeFilter === filter.key && styles.activeFilterBadgeText]}>
+                  {filter.count}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
-      {filteredListings.length > 0 ? (
+      {/* Main content area */}
+      {safeListings.length === 0 ? (
+        // Show empty state when no listings at all
+        <EmptyState 
+          title="No Listings Available"
+          subtitle="You haven't created any listings yet. Start by creating your first listing to begin swapping!"
+          showCreateButton={true}
+        />
+      ) : filteredListings.length === 0 ? (
+        // Show filtered empty state when listings exist but filter returns empty
+        <EmptyState 
+          title={`No ${activeFilter === 'all' ? '' : activeFilter} listings`}
+          subtitle={`You don't have any ${activeFilter === 'all' ? '' : activeFilter} listings at the moment.`}
+          showCreateButton={false}
+        />
+      ) : (
+        // Show listings
         <FlatList
           data={filteredListings}
           renderItem={renderListingItem}
@@ -234,20 +328,20 @@ const MyListingsPage = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.chatListContent}
         />
-      ) : (
-        <View style={styles.centerContainer}>
-          <Ionicons name="list" size={48} color={Colors.textSecondary} />
-          <Text style={styles.emptyText}>
-            {activeFilter === 'all' ? 'No listings found' : `No ${activeFilter} listings`}
-          </Text>
-          <TouchableOpacity 
-            style={styles.createButton}
-            onPress={() => navigation.navigate('CreateListing')}
-          >
-            <Text style={styles.createButtonText}>Create Your First Listing</Text>
-          </TouchableOpacity>
-        </View>
       )}
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonType={alertConfig.buttonType}
+        confirmText={alertConfig.confirmText}
+        cancelText={alertConfig.cancelText}
+        onClose={alertConfig.onClose}
+        onCancel={alertConfig.onCancel}
+      />
+
     </SafeAreaView>
   );
 };
@@ -274,11 +368,19 @@ const styles = StyleSheet.create({
     color: Colors.danger,
     textAlign: 'center',
   },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 16,
+  emptyTitle: {
+    marginTop: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    marginTop: 8,
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 20,
   },
   retryButton: {
     marginTop: 16,
@@ -293,11 +395,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   createButton: {
-    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 24,
     paddingHorizontal: 24,
     paddingVertical: 12,
     backgroundColor: Colors.primary,
     borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  createButtonIcon: {
+    marginRight: 8,
   },
   createButtonText: {
     color: Colors.surface,
@@ -311,6 +426,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    maxHeight: 76,
+    minHeight: 75,
   },
   filtersContent: {
     paddingHorizontal: 16,
@@ -363,7 +480,7 @@ const styles = StyleSheet.create({
   },
   listingsList: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontalVertical: 16,
   },
   chatListContent: {
     flexGrow: 1,
@@ -462,18 +579,18 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginRight: 8,
   },
-  editBtn: {
-    backgroundColor: Colors.neutral50,
+  deleteBtn: {
+    backgroundColor: Colors.danger,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   viewBtn: {
     backgroundColor: Colors.primary,
   },
-  editBtnText: {
+  deleteBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.text,
+    color: Colors.neutral0,
   },
   viewBtnText: {
     fontSize: 12,

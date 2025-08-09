@@ -3,16 +3,18 @@ const db = require('../db');
 class Offer {
   static async findById(id) {
     const result = await db.query(
-      `SELECT o.*, p.title as product_title, p.images as product_images,
-              u1.username as buyer_name, u2.username as seller_name
-       FROM offers o
-       LEFT JOIN products p ON o.product_id = p.id
-       LEFT JOIN users u1 ON o.buyer_id = u1.id
-       LEFT JOIN users u2 ON o.seller_id = u2.id
-       WHERE o.id = $1`,
+      `SELECT * FROM offers WHERE id = $1`,
       [id]
     );
     return result.rows[0] || null;
+  }
+
+  static async findOffersforProduct(productId) {
+    const result = await db.query(
+      `SELECT * FROM offers where product_id = $1 ORDER BY created_at DESC`,
+      [productId]
+    );
+    return result.rows;
   }
 
   static async findByBuyer(buyerId) {
@@ -25,6 +27,14 @@ class Offer {
        WHERE o.buyer_id = $1
        ORDER BY o.created_at DESC`,
       [buyerId]
+    );
+    return result.rows;
+  }
+
+  static async findByProduct(Id){
+    const result = await db.query (
+      `SELECT * FROM offers WHERE product_id = $1`,
+      [Id]
     );
     return result.rows;
   }

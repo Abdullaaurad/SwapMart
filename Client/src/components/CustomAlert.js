@@ -70,6 +70,51 @@ const CustomAlert = ({
       return null;
     }
 
+    if (buttonType === 'single') {
+      return (
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.button, 
+              styles.confirmButton,
+              styles.singleButton,
+              { backgroundColor: getAlertColor() }
+            ]}
+            onPress={onClose}
+          >
+            <Text style={styles.confirmButtonText}>{confirmText}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (buttonType === 'double') {
+      return (
+        <View style={styles.buttonContainer}>
+          <View style={styles.doubleButtonRow}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton, styles.doubleButton]}
+              onPress={onCancel || onClose}
+            >
+              <Text style={styles.cancelButtonText}>{cancelText}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.button, 
+                styles.confirmButton,
+                styles.doubleButton,
+                { backgroundColor: getAlertColor() }
+              ]}
+              onPress={onClose}
+            >
+              <Text style={styles.confirmButtonText}>{confirmText}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
     if (buttonType === 'triple') {
       return (
         <View style={styles.buttonContainer}>
@@ -109,30 +154,7 @@ const CustomAlert = ({
       );
     }
 
-    return (
-      <View style={styles.buttonContainer}>
-        {buttonType === 'double' && (
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
-            onPress={onCancel || onClose}
-          >
-            <Text style={styles.cancelButtonText}>{cancelText}</Text>
-          </TouchableOpacity>
-        )}
-        
-        <TouchableOpacity
-          style={[
-            styles.button, 
-            styles.confirmButton,
-            { backgroundColor: getAlertColor() },
-            buttonType === 'double' && styles.confirmButtonWithCancel
-          ]}
-          onPress={onClose}
-        >
-          <Text style={styles.confirmButtonText}>{confirmText}</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return null;
   };
 
   return (
@@ -243,12 +265,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 44,
   },
-  confirmButton: {
-    backgroundColor: '#3B82F6',
+  singleButton: {
+    width: '100%',
+  },
+  doubleButtonRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  doubleButton: {
     flex: 1,
   },
-  confirmButtonWithCancel: {
-    flex: 1,
+  confirmButton: {
+    backgroundColor: '#3B82F6',
   },
   cancelButton: {
     backgroundColor: 'transparent',

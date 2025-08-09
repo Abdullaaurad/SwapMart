@@ -1,5 +1,9 @@
+// controllers/productController.js
 const { Product } = require('../models');
+const { Wanted } = require('../models');
+const { Offer } = require('../models');
 
+// Existing functions (keeping as-is)
 exports.getAllProducts = async (req, res) => {
   const limit = parseInt(req.query.limit) || 20;
   const offset = parseInt(req.query.offset) || 0;
@@ -10,7 +14,7 @@ exports.getAllProducts = async (req, res) => {
       products: products
     });
   } catch (err) {
-    console.error('Error fetching swaps:', err);
+    console.error('Error fetching products:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -20,24 +24,89 @@ exports.getAllProducts = async (req, res) => {
 
 exports.getProductsById = async (req, res) => {
   const productId = req.params.id;
-  try {
-    const products = await Product.findById(productId);
-    if (!swap) {
-      return res.status(404).json({
+  if (!productId) {
+    return res.status(400).json({
+      success: false,
+      message: 'Product ID is required'
+    });
+  }
+  else{
+    try {
+      const products = await Product.findById(productId);
+      if (!products) {
+        return res.status(404).json({
+          success: false,
+          message: 'product not found'
+        });
+      }
+      else{
+        const wantedItemsResult = await Wanted.getByProductId(productId);
+        console.log("wanted Items :", wantedItemsResult)
+        products.wanted_items = wantedItemsResult
+        return res.status(200).json({
+          success: true,
+          products: products
+        });
+        
+      }
+    }
+    catch (err) {
+      console.error('Error fetching products:', err);
+      return res.status(500).json({
         success: false,
-        message: 'Swap not found'
+        message: 'Internal server error'
       });
     }
-    return res.status(200).json({
-      success: true,
-      products: products
-    });
-  } catch (err) {
-    console.error('Error fetching swap:', err);
-    return res.status(500).json({
+  }
+}
+
+exports.getMyProductsById = async (req, res) => {
+  const productId = req.params.id;
+  const userId = req.user.id;
+  if (!productId) {
+    return res.status(400).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Product ID is required'
     });
+  }
+  else{
+    try {
+      const products = await Product.findById(productId);
+      if (!products) {
+        return res.status(404).json({
+          success: false,
+          message: 'product not found'
+        });
+      }
+      else{
+        if( products.user_id !== userId) {
+          return res.status(403).json({
+            success: false,
+            message: 'You do not have permission to view this product'
+          });
+        }
+        else{
+          const wantedItemsResult = await Wanted.getByProductId(productId);
+          console.log("wanted Items :", wantedItemsResult)
+          products.wanted_items = wantedItemsResult
+
+          const offers = await Offer.findByProduct(productId)
+          products.offer = offers
+
+          return res.status(200).json({
+            success: true,
+            products: products
+          });
+        }
+      }
+    }
+    catch (err) {
+      console.error('Error fetching products:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
   }
 }
 
@@ -51,7 +120,7 @@ exports.getMyProductsListings = async (req, res) => {
       products: products
     });
   } catch (err) {
-    console.error('Error fetching user swaps:', err);
+    console.error('Error fetching user productss:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -69,7 +138,7 @@ exports.getListingHistory = async (req, res) => {
       products: products
     });
   } catch (err) {
-    console.error('Error fetching user swaps:', err);
+    console.error('Error fetching user productss:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -108,7 +177,7 @@ exports.createProduct = async (req, res) => {
       priority: index + 1
     }));
 
-    const swapData = {
+    const productsData = {
       user_id: userId,
       title,
       description,
@@ -127,14 +196,14 @@ exports.createProduct = async (req, res) => {
       wanted_items: wantedItemsFormatted
     };
 
-    const newProduct = await Product.create(swapData);
+    const newProduct = await Product.create(productsData);
 
     return res.status(201).json({
       success: true,
       product: newProduct
     });
   } catch (err) {
-    console.error('Error creating swap:', err);
+    console.error('Error creating products:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -148,18 +217,18 @@ exports.updateProduct = async (req, res) => {
   const updateData = req.body;
 
   try {
-    const product = await Product.findById(swapId);
+    const product = await Product.findById(productId); // Fixed typo: was productsId
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Swap not found'
+        message: 'Products not found'
       });
     }
 
     if (product.user_id !== userId) {
       return res.status(403).json({
         success: false,
-        message: 'You do not have permission to update this swap'
+        message: 'You do not have permission to update this products'
       });
     }
 
@@ -173,14 +242,14 @@ exports.updateProduct = async (req, res) => {
       delete updateData.wantedItems;
     }
 
-    const updatedSwap = await roduct.update(productId, updateData);
+    const updatedproducts = await Product.update(productId, updateData); // Fixed typo: was roduct
 
     return res.status(200).json({
       success: true,
-      product: updatedSwap
+      product: updatedproducts
     });
   } catch (err) {
-    console.error('Error updating swap:', err);
+    console.error('Error updating products:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -193,28 +262,28 @@ exports.deleteProduct = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const swap = await Swap.findById(productId);
-    if (!swap) {
+    const product = await Product.findById(productId);
+    if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Swap not found'
+        message: 'Product not found'
       });
     }
 
-    if (swap.user_id !== userId) {
+    if (product.user_id !== userId) {
       return res.status(403).json({
         success: false,
-        message: 'You do not have permission to delete this swap'
+        message: 'You do not have permission to delete this products'
       });
     }
 
-    await Product.delete(swapId);
+    await Product.delete(productId);
     return res.status(200).json({
       success: true,
-      message: 'Swap deleted successfully'
+      message: 'product deleted successfully'
     });
   } catch (err) {
-    console.error('Error deleting swap:', err);
+    console.error('Error deleting products:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -239,7 +308,7 @@ exports.searchProducts = async (req, res) => {
       products: products
     });
   } catch (err) {
-    console.error('Error searching swaps:', err);
+    console.error('Error searching products:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -259,10 +328,264 @@ exports.getProductsByCategory = async (req, res) => {
       products: products
     });
   } catch (err) {
-    console.error('Error fetching swaps by category:', err);
+    console.error('Error fetching products by category:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
     });
   }
-} 
+}
+
+// NEW ADDITIONAL FUNCTIONS for enhanced functionality
+
+// Get products for home page with filtering and search
+exports.getHomeProducts = async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = parseInt(req.query.offset) || 0;
+  const { search, categoryId, condition, minPrice, maxPrice, location } = req.query;
+
+  try {
+    const filters = { status: 'active' };
+    
+    // Apply filters
+    if (categoryId && categoryId !== 'null') filters.category_id = parseInt(categoryId);
+    if (search && search.trim()) filters.search = search.trim();
+    if (condition) filters.condition = condition;
+    if (location) filters.location = location;
+    if (minPrice || maxPrice) {
+      filters.priceRange = {};
+      if (minPrice) filters.priceRange.min = parseFloat(minPrice);
+      if (maxPrice) filters.priceRange.max = parseFloat(maxPrice);
+    }
+
+    const products = await Product.findHomeProducts ? 
+      await Product.findHomeProducts(limit, offset, filters) :
+      await Product.findAllWithFilters(limit, offset, filters);
+    
+    return res.status(200).json({
+      success: true,
+      products: products
+    });
+  } catch (err) {
+    console.error('Error fetching home products:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// Get featured products
+exports.getFeaturedProducts = async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+
+  try {
+    const products = await Product.findFeatured ? 
+      await Product.findFeatured(limit) :
+      await Product.findAll(limit, 0); // Fallback to all products
+    
+    return res.status(200).json({
+      success: true,
+      products: products
+    });
+  } catch (err) {
+    console.error('Error fetching featured products:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// Get products by user with filters
+exports.getUserProducts = async (req, res) => {
+  const { userId } = req.params;
+  const limit = parseInt(req.query.limit) || 20;
+  const offset = parseInt(req.query.offset) || 0;
+  const { status, condition } = req.query;
+
+  try {
+    const filters = { user_id: parseInt(userId) };
+    if (status) filters.status = status;
+    if (condition) filters.condition = condition;
+
+    const products = await Product.findByUserWithFilters ? 
+      await Product.findByUserWithFilters(userId, limit, offset, filters) :
+      await Product.findByUserlistings(userId);
+    
+    return res.status(200).json({
+      success: true,
+      products: products
+    });
+  } catch (err) {
+    console.error('Error fetching user products:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// Advanced search with multiple filters
+exports.advancedSearch = async (req, res) => {
+  const {
+    q, categoryId, condition, minPrice, maxPrice, location,
+    swapPreference, negotiable, sortBy = 'created_at', sortOrder = 'desc',
+    limit = 20, offset = 0
+  } = req.query;
+
+  if (!q || q.trim() === '') {
+    return res.status(400).json({
+      success: false,
+      message: 'Search query is required'
+    });
+  }
+
+  try {
+    const filters = {
+      search: q.trim(),
+      status: 'active'
+    };
+
+    // Apply advanced filters
+    if (categoryId) filters.category_id = parseInt(categoryId);
+    if (condition) filters.condition = condition;
+    if (location) filters.location = location;
+    if (swapPreference) filters.swap_preference = swapPreference;
+    if (negotiable !== undefined) filters.negotiable = negotiable === 'true';
+    
+    if (minPrice || maxPrice) {
+      filters.priceRange = {};
+      if (minPrice) filters.priceRange.min = parseFloat(minPrice);
+      if (maxPrice) filters.priceRange.max = parseFloat(maxPrice);
+    }
+
+    const products = await Product.advancedSearch ? 
+      await Product.advancedSearch(filters, parseInt(limit), parseInt(offset), sortBy, sortOrder) :
+      await Product.search(q, parseInt(limit), parseInt(offset));
+    
+    return res.status(200).json({
+      success: true,
+      products: products,
+      searchQuery: q,
+      filters: filters
+    });
+  } catch (err) {
+    console.error('Error in advanced search:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// Get similar products (based on category and wanted items)
+exports.getSimilarProducts = async (req, res) => {
+  const { id } = req.params;
+  const limit = parseInt(req.query.limit) || 5;
+
+  try {
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    const similarProducts = await Product.findSimilar ? 
+      await Product.findSimilar(id, product.category_id, limit) :
+      await Product.findByCategory(product.category_id, limit, 0);
+    
+    // Filter out the current product
+    const filteredProducts = similarProducts.filter(p => p.id !== parseInt(id));
+    
+    return res.status(200).json({
+      success: true,
+      products: filteredProducts
+    });
+  } catch (err) {
+    console.error('Error fetching similar products:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// Toggle product status (active/inactive)
+exports.toggleProductStatus = async (req, res) => {
+  const productId = req.params.id;
+  const userId = req.user.id;
+
+  try {
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    if (product.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to modify this product'
+      });
+    }
+
+    const newStatus = product.status === 'active' ? 'inactive' : 'active';
+    const updatedProduct = await Product.updateStatus ?
+      await Product.updateStatus(productId, newStatus) :
+      await Product.update(productId, { status: newStatus });
+
+    return res.status(200).json({
+      success: true,
+      message: `Product ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
+      product: updatedProduct
+    });
+  } catch (err) {
+    console.error('Error toggling product status:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// Get product statistics for dashboard
+exports.getProductStats = async (req, res) => {
+  const { userId } = req.params;
+  const requestingUserId = req.user.id;
+
+  // Check if user is requesting their own stats or is admin
+  if (parseInt(userId) !== requestingUserId && req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'You do not have permission to view these statistics'
+    });
+  }
+
+  try {
+    const stats = await Product.getUserStats ? 
+      await Product.getUserStats(userId) :
+      {
+        total: 0,
+        active: 0,
+        inactive: 0,
+        views: 0,
+        offers_received: 0
+      };
+    
+    return res.status(200).json({
+      success: true,
+      stats: stats
+    });
+  } catch (err) {
+    console.error('Error fetching product stats:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}

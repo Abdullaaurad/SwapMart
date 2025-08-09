@@ -5,7 +5,7 @@ class Product {
     const result = await db.query(
       `SELECT p.*, c.name as category_name, u.username as seller_name, u.profile_image as seller_image
        FROM products p 
-       LEFT JOIN categories c ON s.category_id = c.id 
+       LEFT JOIN categories c ON p.category_id = c.id 
        LEFT JOIN users u ON p.user_id = u.id 
        WHERE p.id = $1`,
       [id]
@@ -104,14 +104,20 @@ class Product {
       [limit, offset]
     );
     
-    // Get wanted items for each swap
-    for (let swap of result.rows) {
-      const wantedItemsResult = await db.query(
-        `SELECT * FROM wanted_items WHERE product_id = $1 ORDER BY priority ASC`,
-        [swap.id]
-      );
-      swap.wanted_items = wantedItemsResult.rows;
-    }
+    return result.rows;
+  }
+
+  static async findAllHome(userId, limit = 20, offset = 0) {
+    const result = await db.query(
+      `SELECT p.*, c.name as category_name, u.username as seller_name, u.profile_image as seller_image
+       FROM prodcuts p 
+       LEFT JOIN categories c ON p.category_id = c.id 
+       LEFT JOIN users u ON p.user_id = u.id 
+       WHERE p.is_available = true AND user_Id != $1
+       ORDER BY p.created_at DESC 
+       LIMIT $2 OFFSET $3`,
+      [userId, limit, offset]
+    );
     
     return result.rows;
   }
@@ -267,7 +273,7 @@ class Product {
 
   static async delete(id) {
     const result = await db.query(
-      'DELETE FROM prodcuts WHERE id = $1 RETURNING *',
+      'DELETE FROM products WHERE id = $1 RETURNING *',
       [id]
     );
     return result.rows[0];
