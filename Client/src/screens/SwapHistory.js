@@ -15,28 +15,29 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
 
-const SwapHistoryPage = () => {
+const ProductHistoryPage = () => {
   const navigation = useNavigation();
   const [activeFilter, setActiveFilter] = useState('all');
+  const [productHistory, setProductHistory] = useState([]);
 
   useEffect(() => {
-    const fetchSwapHistory = async () => {
+    const fetchProductHistory = async () => {
       try{
         const response = await axios.get(`${BASE_URL}/products/listing-history`);
         if(response.data.success){
-          console.log('Fetched swap history:', response.data.swaps);
-          swapHistory.push(...response.data.swaps);
+          console.log('Fetched product history:', response.data.products);
+          setProductHistory(response.data.products)
         }
       }
       catch (error) {
-        console.error('Error fetching swap history:', error);
+        console.error('Error fetching product history:', error);
       }
     }
-    fetchSwapHistory();
+    fetchProductHistory();
   }, [] );
-
-  const swapHistory = [];
 
   const formatDate = (date) => {
     return date.toLocaleDateString('en-US', {
@@ -46,7 +47,7 @@ const SwapHistoryPage = () => {
     });
   };
 
-  const renderSwapItem = ({ item }) => (
+  const renderProductItem = ({ item }) => (
     <TouchableOpacity style={styles.swapCard}>
       <View style={styles.swapHeader}>
         <View style={styles.partnerInfo}>
@@ -120,7 +121,7 @@ const SwapHistoryPage = () => {
 
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{swapHistory.length}</Text>
+          <Text style={styles.statNumber}>{productHistory.length}</Text>
           <Text style={styles.statLabel}>Total Swaps</Text>
         </View>
         <View style={styles.statItem}>
@@ -134,8 +135,8 @@ const SwapHistoryPage = () => {
       </View>
 
       <FlatList
-        data={swapHistory}
-        renderItem={renderSwapItem}
+        data={productHistory}
+        renderItem={renderProductItem}
         keyExtractor={(item) => item.id.toString()}
         style={styles.swapList}
         showsVerticalScrollIndicator={false}
@@ -308,4 +309,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SwapHistoryPage;
+export default ProductHistoryPage;

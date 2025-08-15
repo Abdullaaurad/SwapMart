@@ -53,6 +53,18 @@ class Swap {
     return result.rows;
   }
 
+    static async findByProductOne(productId) {
+    const result = await db.query(
+      `SELECT s.*, o.offered_item_title, o.buyer_id
+         FROM swaps s
+         LEFT JOIN offers o ON s.offer_id = o.id
+        WHERE s.product_id = $1
+        ORDER BY s.created_at DESC`,
+      [productId]
+    );
+    return result.rows[0];
+  }
+
   // Mark a swap as completed
   static async markSwaped(id) {
     const result = await db.query(

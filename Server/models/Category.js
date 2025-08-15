@@ -3,7 +3,7 @@ const db = require('../db');
 class Category {
   static async findAll() {
     const result = await db.query(
-      'SELECT * FROM categories ORDER BY name ASC'
+      'SELECT * FROM categories'
     );
     return result.rows;
   }

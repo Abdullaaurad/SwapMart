@@ -2,6 +2,8 @@
 const { Product } = require('../models');
 const { Wanted } = require('../models');
 const { Offer } = require('../models');
+const { Swap } = require('../models')
+const { User } = require('../models');
 
 // Existing functions (keeping as-is)
 exports.getAllProducts = async (req, res) => {
@@ -131,14 +133,53 @@ exports.getMyProductsListings = async (req, res) => {
 exports.getListingHistory = async (req, res) => {
   const userId = req.user.id;
   try {
-    const products = await Product.findByUserlistings(userId);
-    console.log("products:",  products);
+    const products = await Product.findByUserlistingsdone(userId);
+    const enrichedProducts = [];
+    
+    for (let product of products) {
+      console.log("Product:", product);
+      // Get swap data for this product
+      const swapData = await Swap.findByProductOne(product.id);
+      console.log("Swap Data: ", swapData);
+      
+      // Get the accepted offer that led to this swap
+      const acceptedOffer = await Offer.findById(swapData.offer_id);
+      console.log("Offer id =",acceptedOffer.offer_id);
+      console.log('Offer: ', acceptedOffer);
+
+      const Userdetails = await User.findById(acceptedOffer.buyer_id)
+      console.log("User Details: ", Userdetails);
+      
+      // Enrich product with swap and offer data
+      const enrichedProduct = {
+        id: product.id,
+        swapId: swapData.id,
+        swapPartner: Userdetails.fullname,
+        completedDate: Date(swapData.updated_at),
+        partnerAvatar: Userdetails.profile_image,
+        
+        myItem: {
+          name: product.title,
+          image: product.images,
+          description: product.description,
+        },
+        
+        receivedItem: {
+          name: acceptedOffer.offered_item_title,
+          image: acceptedOffer.offered_item_images,
+          description: acceptedOffer.offered_item_description,
+        }
+      };
+      
+      enrichedProducts.push(enrichedProduct);
+    }
+
     return res.status(200).json({
       success: true,
-      products: products
+      products: enrichedProducts
     });
   } catch (err) {
-    console.error('Error fetching user productss:', err);
+    console.error('Error fetching user products:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -336,13 +377,11 @@ exports.getProductsByCategory = async (req, res) => {
   }
 }
 
-// NEW ADDITIONAL FUNCTIONS for enhanced functionality
-
-// Get products for home page with filtering and search
 exports.getHomeProducts = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const offset = parseInt(req.query.offset) || 0;
-  const { search, categoryId, condition, minPrice, maxPrice, location } = req.query;
+  console.log("Limit =", limit, "Offset =",  offset)
+  const { search, categoryId} = req.query;
 
   try {
     const filters = { status: 'active' };
@@ -350,13 +389,6 @@ exports.getHomeProducts = async (req, res) => {
     // Apply filters
     if (categoryId && categoryId !== 'null') filters.category_id = parseInt(categoryId);
     if (search && search.trim()) filters.search = search.trim();
-    if (condition) filters.condition = condition;
-    if (location) filters.location = location;
-    if (minPrice || maxPrice) {
-      filters.priceRange = {};
-      if (minPrice) filters.priceRange.min = parseFloat(minPrice);
-      if (maxPrice) filters.priceRange.max = parseFloat(maxPrice);
-    }
 
     const products = await Product.findHomeProducts ? 
       await Product.findHomeProducts(limit, offset, filters) :

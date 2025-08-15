@@ -668,6 +668,13 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS likes (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER REFERENCES products(id),
+    user_id INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Reviews table
 CREATE TABLE IF NOT EXISTS reviews (
     id SERIAL PRIMARY KEY,
@@ -710,6 +717,12 @@ INSERT INTO categories (name, description, icon) VALUES
 ('Art & Collectibles', 'Paintings, antiques, memorabilia', 'brush'),
 ('Other', 'Everything else', 'ellipsis-horizontal')
 ON CONFLICT DO NOTHING;
+
+INSERT INTO swaps (product_id, offer_id, user_accepted, buyer_accepted, swaped, created_at, updated_at) VALUES
+(4, 1, TRUE, FALSE, FALSE, '2024-01-15 10:30:00', '2024-01-15 10:30:00'),
+(5, 2, TRUE, TRUE, TRUE, '2024-01-14 14:20:00', '2024-01-16 09:15:00'),
+(7, 3, FALSE, FALSE, FALSE, '2024-01-13 16:45:00', '2024-01-13 16:45:00');
+
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_ products_user_id ON  products(user_id);

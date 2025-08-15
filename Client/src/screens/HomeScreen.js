@@ -99,7 +99,9 @@ const SwapMartHomePage = () => {
       if (categoryId) params.categoryId = categoryId;
       if (search.trim()) params.search = search.trim();
 
+      console.log(params);
       const result = await axios.get(`${BASE_URL}/products/home`, { params });
+      console.log(result);
       
       if (result.data && result.data.success) {
         const newProducts = result.data.products || [];
@@ -146,10 +148,6 @@ const SwapMartHomePage = () => {
   }, [searchQuery, selectedCategory]);
 
   // Handle category selection
-  const handleCategoryPress = (categoryId) => {
-    setSelectedCategory(categoryId);
-    setCurrentPage(0);
-  };
 
   // Handle search input
   const handleSearchChange = (text) => {
@@ -171,8 +169,12 @@ const SwapMartHomePage = () => {
     }
   };
 
-  // Components
-  const CategoryCard = ({ category }) => {
+  const CategoryCard = ({ category, selectedCategory}) => {
+
+    const handleCategoryPress = (categoryId) => {
+      setSelectedCategory(categoryId);
+      setCurrentPage(0);
+    };
     const isSelected = selectedCategory === category.id;
     
     return (
@@ -182,18 +184,21 @@ const SwapMartHomePage = () => {
           isSelected && styles.categoryCardSelected
         ]}
         onPress={() => handleCategoryPress(category.id)}
+        activeOpacity={0.8}
       >
         <View style={[
-          styles.categoryIcon, 
-          { backgroundColor: `${category.color}15` },
-          isSelected && { backgroundColor: category.color }
+          styles.categoryIcon,
+          { backgroundColor: Colors.neutral50 },
+          isSelected && { 
+            backgroundColor: Colors.primary,
+            transform: [{ scale: 1.1 }]
+          }
         ]}>
-          <Text style={[
-            styles.categoryEmoji,
-            isSelected && styles.categoryEmojiSelected
-          ]}>
-            {category.icon}
-          </Text>
+          <Ionicons 
+            name={category.icon} 
+            size={24}
+            color={isSelected ? Colors.primary : Colors.neutral1000}
+          />
         </View>
         <Text style={[
           styles.categoryName,
@@ -433,34 +438,57 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 16,
+    marginBottom: 12,
     width: 80,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    // Shadow for Android
+    elevation: 3,
   },
   categoryCardSelected: {
+    borderColor: '#3B82F6',
+    borderWidth: 2.5,
+    backgroundColor: '#F8FAFC',
     transform: [{ scale: 1.05 }],
+    // Enhanced shadow when selected
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 6,
   },
   categoryIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-  },
-  categoryEmoji: {
-    fontSize: 32,
-  },
-  categoryEmojiSelected: {
-    color: Colors.surface,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    color: Colors.primary,
   },
   categoryName: {
     fontSize: 12,
     fontWeight: '500',
-    color: Colors.text,
+    color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 16,
   },
   categoryNameSelected: {
-    color: Colors.primary,
+    color: '#1F2937',
     fontWeight: '600',
   },
 
@@ -525,7 +553,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     alignItems: 'center',
   },
-
   bottomSpacing: {
     height: 20,
   },

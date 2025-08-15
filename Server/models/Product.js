@@ -68,6 +68,19 @@ class Product {
     return result.rows;
   }
 
+  static async findByUserlistingsdone(userId){
+    const result = await db.query(
+      `SELECT p.*, c.name as category_name 
+       FROM products p 
+       LEFT JOIN categories c ON p.category_id = c.id 
+       WHERE p.user_id = $1 AND p.is_available = false
+       ORDER BY p.created_at DESC`,
+      [userId]
+    );
+
+    return result.rows;
+  }
+
   static async findByCategory(categoryId, limit = 20, offset = 0) {
     const result = await db.query(
       `SELECT p.*, c.name as category_name, u.username as seller_name, u.profile_image as seller_image
@@ -286,6 +299,221 @@ class Product {
     );
     return result.rows[0];
   }
+
+  static async findHomeProducts(limit, offset, filters = {}) {
+    let query = `
+      SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.price,
+        p.discount_price,
+        p.image_url,
+        p.category_id,
+        p.user_id,
+        p.stock_quantity,
+        p.rating,
+        p.review_count,
+        p.is_featured,
+        p.created_at,
+        c.name as category_name,
+        c.color as category_color,
+        c.icon as category_icon,
+        u.username as seller_name,
+        u.profile_image as seller_image
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN users u ON p.user_id = u.id
+      WHERE p.status = $1
+    `;
+    
+    const queryParams = ['active'];
+    let paramIndex = 2;
+    
+    // Apply category filter
+    if (filters.category_id) {
+      query += ` AND p.category_id = ${paramIndex}`;
+      queryParams.push(filters.category_id);
+      paramIndex++;
+    }
+    
+    // Apply search filter
+    if (filters.search) {
+      query += ` AND (
+        LOWER(p.name) ILIKE ${paramIndex} OR 
+        LOWER(p.description) ILIKE ${paramIndex} OR
+        LOWER(c.name) ILIKE ${paramIndex}
+      )`;
+      queryParams.push(`%${filters.search.toLowerCase()}%`);
+      paramIndex++;
+    }
+    
+    // Order by featured products first, then by rating, then by newest
+    query += `
+      ORDER BY 
+        p.is_featured DESC,
+        p.rating DESC,
+        p.created_at DESC
+      LIMIT ${paramIndex} OFFSET ${paramIndex + 1}
+    `;
+    
+    queryParams.push(limit, offset);
+    
+    const result = await db.query(query, queryParams);
+    return result.rows;
+  }
+  
+  // Find all products with filters (more general purpose)
+  static async findAllWithFilters(limit, offset, filters = {}) {
+    let query = `
+      SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.price,
+        p.discount_price,
+        p.image_url,
+        p.category_id,
+        p.user_id,
+        p.stock_quantity,
+        p.rating,
+        p.review_count,
+        p.status,
+        p.created_at,
+        p.updated_at,
+        c.name as category_name,
+        u.username as seller_name,
+        u.profile_image as seller_image
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN users u ON p.user_id = u.id
+      WHERE 1=1
+    `;
+    
+    const queryParams = [];
+    let paramIndex = 1;
+    
+    // Apply status filter
+    if (filters.status) {
+      query += ` AND p.status = ${paramIndex}`;
+      queryParams.push(filters.status);
+      paramIndex++;
+    }
+    
+    // Apply category filter
+    if (filters.category_id) {
+      query += ` AND p.category_id = ${paramIndex}`;
+      queryParams.push(filters.category_id);
+      paramIndex++;
+    }
+    
+    // Apply search filter
+    if (filters.search) {
+      query += ` AND (
+        LOWER(p.name) ILIKE ${paramIndex} OR 
+        LOWER(p.description) ILIKE ${paramIndex}
+      )`;
+      queryParams.push(`%${filters.search.toLowerCase()}%`);
+      paramIndex++;
+    }
+    
+    // Apply price range filter (optional)
+    if (filters.min_price) {
+      query += ` AND p.price >= ${paramIndex}`;
+      queryParams.push(filters.min_price);
+      paramIndex++;
+    }
+    
+    if (filters.max_price) {
+      query += ` AND p.price <= ${paramIndex}`;
+      queryParams.push(filters.max_price);
+      paramIndex++;
+    }
+    
+    // Apply rating filter (optional)
+    if (filters.min_rating) {
+      query += ` AND p.rating >= ${paramIndex}`;
+      queryParams.push(filters.min_rating);
+      paramIndex++;
+    }
+    
+    // Apply stock filter (optional)
+    if (filters.in_stock) {
+      query += ` AND p.stock_quantity > 0`;
+    }
+    
+    // Default ordering
+    query += `
+      ORDER BY p.created_at DESC
+      LIMIT ${paramIndex} OFFSET ${paramIndex + 1}
+    `;
+    
+    queryParams.push(limit, offset);
+    
+    const result = await db.query(query, queryParams);
+    return result.rows;
+  }
+  
+  // Get total count for pagination
+  static async getProductCount(filters = {}) {
+    let query = `
+      SELECT COUNT(*) as total
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE 1=1
+    `;
+    
+    const queryParams = [];
+    let paramIndex = 1;
+    
+    // Apply same filters as findAllWithFilters
+    if (filters.status) {
+      query += ` AND p.status = ${paramIndex}`;
+      queryParams.push(filters.status);
+      paramIndex++;
+    }
+    
+    if (filters.category_id) {
+      query += ` AND p.category_id = ${paramIndex}`;
+      queryParams.push(filters.category_id);
+      paramIndex++;
+    }
+    
+    if (filters.search) {
+      query += ` AND (
+        LOWER(p.name) ILIKE ${paramIndex} OR 
+        LOWER(p.description) ILIKE ${paramIndex}
+      )`;
+      queryParams.push(`%${filters.search.toLowerCase()}%`);
+      paramIndex++;
+    }
+    
+    if (filters.min_price) {
+      query += ` AND p.price >= ${paramIndex}`;
+      queryParams.push(filters.min_price);
+      paramIndex++;
+    }
+    
+    if (filters.max_price) {
+      query += ` AND p.price <= ${paramIndex}`;
+      queryParams.push(filters.max_price);
+      paramIndex++;
+    }
+    
+    if (filters.min_rating) {
+      query += ` AND p.rating >= ${paramIndex}`;
+      queryParams.push(filters.min_rating);
+      paramIndex++;
+    }
+    
+    if (filters.in_stock) {
+      query += ` AND p.stock_quantity > 0`;
+    }
+    
+    const result = await db.query(query, queryParams);
+    return parseInt(result.rows[0].total);
+  }
+
 }
 
 module.exports = Product; 

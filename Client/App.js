@@ -7,7 +7,6 @@ import LogIn from './src/screens/LogIn';
 import SignUp from './src/screens/SignUp';
 import ForgotPassword from './src/screens/ForgotPassword';
 import Verification from './src/screens/Verification';
-import LoadingScreen from './src/screens/LoadingScreen';
 import Onboarding from './src/screens/Onboarding';
 
 import Profile from './src/screens/Profile';
@@ -57,7 +56,6 @@ export default function App() {
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
         <Stack.Screen name="ResetPassword" component={ResetPassword} />
         <Stack.Screen name="Verification" component={Verification} />
-        <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
 
         {/* Main App Screens */}
         <Stack.Screen name="Profile" component={Profile} />
