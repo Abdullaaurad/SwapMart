@@ -1,5 +1,5 @@
 // SwapHistoryPage.js - All completed swaps
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,110 +15,106 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
 
-const SwapHistoryPage = () => {
+const ProductHistoryPage = () => {
   const navigation = useNavigation();
   const [activeFilter, setActiveFilter] = useState('all');
+  const [productHistory, setProductHistory] = useState([]);
 
-  const swapHistory = [
-    {
-      id: 1,
-      swapPartner: 'John Doe',
-      partnerAvatar: require('../assets/avatar.jpeg'),
-      myItem: {
-        name: 'iPhone 14 Pro',
-        image: require('../assets/IPhone14.jpeg'),
-        condition: 'Excellent'
-      },
-      receivedItem: {
-        name: 'MacBook Air M1',
-        image: require('../assets/Mac.jpeg'),
-        condition: 'Like New'
-      },
-      completedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      status: 'completed',
-      rating: 5,
-      swapId: '#SW001'
-    },
-    {
-      id: 2,
-      swapPartner: 'Sarah Wilson',
-      partnerAvatar: require('../assets/avatar.jpeg'),
-      myItem: {
-        name: 'Designer Handbag',
-        image: require('../assets/Handbag.jpeg'),
-        condition: 'Good'
-      },
-      receivedItem: {
-        name: 'Nike Air Jordans',
-        image: require('../assets/shoes.jpeg'),
-        condition: 'Excellent'
-      },
-      completedDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
-      status: 'completed',
-      rating: 4,
-      swapId: '#SW002'
-    },
-    {
-      id: 3,
-      swapPartner: 'Mike Johnson',
-      partnerAvatar: null,
-      myItem: {
-        name: 'Vintage Watch',
-        image: require('../assets/watch.jpeg'),
-        condition: 'Good'
-      },
-      receivedItem: {
-        name: 'Wireless Headphones',
-        image: require('../assets/headphones.jpeg'),
-        condition: 'Like New'
-      },
-      completedDate: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000),
-      status: 'completed',
-      rating: 5,
-      swapId: '#SW003'
+  useEffect(() => {
+    const fetchProductHistory = async () => {
+      try{
+        const response = await axios.get(`${BASE_URL}/products/listing-history`);
+        if(response.data.success){
+          console.log('Fetched product history:', response.data.products[0]?.myItem?.image?.[0]?.url);
+          setProductHistory(response.data.products)
+        }
+      }
+      catch (error) {
+        console.error('Error fetching product history:', error);
+      }
     }
-  ];
+    fetchProductHistory();
+  }, [] );
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('en-US', {
+    // Convert string to Date object
+    const dateObj = new Date(date);
+    
+    // Check if conversion was successful
+    if (isNaN(dateObj.getTime())) {
+      return 'Invalid Date';
+    }
+    
+    return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
   };
 
-  const renderSwapItem = ({ item }) => (
+  // Image placeholder component
+  const ImagePlaceholder = ({ style, text = "No Image" }) => (
+    <View style={[style, styles.imagePlaceholder]}>
+      <Ionicons name="image-outline" size={24} color={Colors.textSecondary} />
+      <Text style={styles.placeholderText}>{text}</Text>
+    </View>
+  );
+
+  // Safe image component with fallback
+  const SafeImage = ({ source, style, alt }) => {
+    const [imageError, setImageError] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    if (!source || imageError) {
+      return <ImagePlaceholder style={style} text={alt || "No Image"} />;
+    }
+
+    return (
+      <Image 
+        source={{ uri: source }}
+        style={style}
+        onError={() => {
+          setImageError(true);
+          setIsLoading(false);
+        }}
+        onLoad={() => setIsLoading(false)}
+      />
+    );
+  };
+
+  const renderProductItem = ({ item }) => (
     <TouchableOpacity style={styles.swapCard}>
       <View style={styles.swapHeader}>
         <View style={styles.partnerInfo}>
           {item.partnerAvatar ? (
-            <Image source={item.partnerAvatar} style={styles.partnerAvatar} />
+            <Image source={{ uri: item.partnerAvatar }} style={styles.partnerAvatar} />
           ) : (
             <View style={styles.partnerAvatarPlaceholder}>
-              <Text style={styles.partnerAvatarText}>{item.swapPartner.charAt(0)}</Text>
+              <Text style={styles.partnerAvatarText}>{item.swapPartner?.charAt(0) || '?'}</Text>
             </View>
           )}
           <View style={styles.partnerDetails}>
-            <Text style={styles.partnerName}>{item.swapPartner}</Text>
-            <Text style={styles.swapId}>{item.swapId}</Text>
+            <Text style={styles.partnerName}>{item.swapPartner || 'Unknown Partner'}</Text>
           </View>
         </View>
         <View style={styles.swapMeta}>
           <Text style={styles.swapDate}>{formatDate(item.completedDate)}</Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={14} color={Colors.warning} />
-            <Text style={styles.ratingText}>{item.rating}</Text>
-          </View>
         </View>
       </View>
 
       <View style={styles.swapDetails}>
         <View style={styles.itemContainer}>
-          <Image source={item.myItem.image} style={styles.itemImage} />
+          <SafeImage 
+            source={item?.myItem?.image?.[0]?.url} 
+            style={styles.itemImage} 
+            alt="My Item"
+          />
           <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.myItem.name}</Text>
-            <Text style={styles.itemCondition}>Condition: {item.myItem.condition}</Text>
+            <Text style={styles.itemName}>{item?.myItem?.name || 'Unknown Item'}</Text>
+            <Text style={styles.itemCondition}>Condition: {item?.myItem?.condition || 'N/A'}</Text>
             <Text style={styles.itemLabel}>You gave</Text>
           </View>
         </View>
@@ -128,10 +124,14 @@ const SwapHistoryPage = () => {
         </View>
 
         <View style={styles.itemContainer}>
-          <Image source={item.receivedItem.image} style={styles.itemImage} />
+          <SafeImage 
+            source={item?.receivedItem?.image[0]} 
+            style={styles.itemImage} 
+            alt="Received Item"
+          />
           <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.receivedItem.name}</Text>
-            <Text style={styles.itemCondition}>Condition: {item.receivedItem.condition}</Text>
+            <Text style={styles.itemName}>{item?.receivedItem?.name || 'Unknown Item'}</Text>
+            <Text style={styles.itemCondition}>Condition: {item?.receivedItem?.condition || 'N/A'}</Text>
             <Text style={styles.itemLabel}>You received</Text>
           </View>
         </View>
@@ -162,7 +162,7 @@ const SwapHistoryPage = () => {
 
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{swapHistory.length}</Text>
+          <Text style={styles.statNumber}>{productHistory.length}</Text>
           <Text style={styles.statLabel}>Total Swaps</Text>
         </View>
         <View style={styles.statItem}>
@@ -176,9 +176,9 @@ const SwapHistoryPage = () => {
       </View>
 
       <FlatList
-        data={swapHistory}
-        renderItem={renderSwapItem}
-        keyExtractor={(item) => item.id.toString()}
+        data={productHistory}
+        renderItem={renderProductItem}
+        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
         style={styles.swapList}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
@@ -348,6 +348,21 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginLeft: 6,
   },
+  // New styles for placeholder
+  imagePlaceholder: {
+    backgroundColor: Colors.neutral100 || '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border || '#e0e0e0',
+    borderStyle: 'dashed',
+  },
+  placeholderText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
+  },
 });
 
-export default SwapHistoryPage;
+export default ProductHistoryPage;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,29 +10,60 @@ import {
   Dimensions,
   Image,
   Switch,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import Colors from '../constants/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
 import BottomNavigation from '../components/BottomNav';
+import CustomAlert from '../components/CustomAlert';
+import * as ImagePicker from 'expo-image-picker';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
 
 const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('AddProducts');
+  const [categories, setCategories] = useState([]);
+  const [categoryName, setCategoryName] = useState();
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
-  const categories = [
-    { id: 'electronics', name: 'Electronics', icon: 'phone-portrait-outline' },
-    { id: 'fashion', name: 'Fashion & Accessories', icon: 'shirt-outline' },
-    { id: 'home', name: 'Home & Garden', icon: 'home-outline' },
-    { id: 'books', name: 'Books & Media', icon: 'book-outline' },
-    { id: 'sports', name: 'Sports & Outdoors', icon: 'basketball-outline' },
-    { id: 'toys', name: 'Toys & Games', icon: 'game-controller-outline' },
-    { id: 'vehicles', name: 'Vehicles & Parts', icon: 'car-outline' },
-    { id: 'collectibles', name: 'Collectibles & Art', icon: 'diamond-outline' },
-    { id: 'music', name: 'Musical Instruments', icon: 'musical-notes-outline' },
-    { id: 'other', name: 'Other', icon: 'ellipsis-horizontal-outline' },
-  ];
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/category/findall`);
+        if (response.data.success) {
+          // Map the categories to match the expected structure
+          const mappedCategories = response.data.categories.map(category => ({
+            id: category.id,
+            name: category.name,
+            icon: category.icon || 'help-circle-outline' // Default icon if not provided
+          }));
+          setCategories(mappedCategories);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        // Fallback to hardcoded categories if API fails
+        setCategories([
+          { id: '1', name: 'Electronics', icon: 'phone-portrait-outline' },
+          { id: '2', name: 'Fashion', icon: 'shirt-outline' },
+          { id: '3', name: 'Home & Garden', icon: 'home-outline' },
+          { id: '4', name: 'Sports & Outdoors', icon: 'basketball-outline' },
+          { id: '5', name: 'Books & Media', icon: 'book-outline' },
+          { id: '6', name: 'Toys & Games', icon: 'game-controller-outline' },
+          { id: '7', name: 'Automotive', icon: 'car-outline' },
+          { id: '8', name: 'Health & Beauty', icon: 'heart-outline' },       // better fit
+          { id: '9', name: 'Art & Collectibles', icon: 'color-palette-outline' }, // paints/art
+          { id: '10', name: 'Others', icon: 'albums-outline' }               // generic/misc
+        ]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const conditions = [
     { id: 'new', name: 'New/Unused', desc: 'Never used, in original packaging' },
@@ -45,8 +76,8 @@ const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!data.title.trim()) newErrors.title = 'Title is required';
-    if (!data.description.trim()) newErrors.description = 'Description is required';
+    if (!data.title?.trim()) newErrors.title = 'Title is required';
+    if (!data.description?.trim()) newErrors.description = 'Description is required';
     if (!data.category) newErrors.category = 'Please select a category';
     if (!data.condition) newErrors.condition = 'Please select condition';
     
@@ -61,13 +92,13 @@ const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
   };
 
   const addTag = (tag) => {
-    if (tag.trim() && !data.tags.includes(tag.trim())) {
-      onUpdate({ tags: [...data.tags, tag.trim()] });
+    if (tag.trim() && !data.tags?.includes(tag.trim())) {
+      onUpdate({ tags: [...(data.tags || []), tag.trim()] });
     }
   };
 
   const removeTag = (tagToRemove) => {
-    onUpdate({ tags: data.tags.filter(tag => tag !== tagToRemove) });
+    onUpdate({ tags: (data.tags || []).filter(tag => tag !== tagToRemove) });
   };
 
   return (
@@ -95,12 +126,12 @@ const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
           <TextInput
             style={[styles.input, errors.title && styles.inputError]}
             placeholder="e.g., iPhone 14 Pro Max 256GB"
-            value={data.title}
+            value={data.title || ''}
             onChangeText={(text) => onUpdate({ title: text })}
             maxLength={80}
           />
           {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
-          <Text style={styles.helperText}>{data.title.length}/80 characters</Text>
+          <Text style={styles.helperText}>{(data.title || '').length}/80 characters</Text>
         </View>
 
         {/* Description */}
@@ -109,43 +140,47 @@ const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
           <TextInput
             style={[styles.textArea, errors.description && styles.inputError]}
             placeholder="Describe your item in detail. Include brand, model, age, any flaws, etc."
-            value={data.description}
+            value={data.description || ''}
             onChangeText={(text) => onUpdate({ description: text })}
             multiline
             numberOfLines={4}
             maxLength={500}
           />
           {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
-          <Text style={styles.helperText}>{data.description.length}/500 characters</Text>
+          <Text style={styles.helperText}>{(data.description || '').length}/500 characters</Text>
         </View>
 
         {/* Category Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Category</Text>
-          <View style={styles.categoryGrid}>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryItem,
-                  data.category === category.id && styles.categoryItemSelected
-                ]}
-                onPress={() => onUpdate({ category: category.id })}
-              >
-                <Ionicons
-                  name={category.icon}
-                  size={24}
-                  color={data.category === category.id ? Colors.neutral0 : Colors.textSecondary}
-                />
-                <Text style={[
-                  styles.categoryText,
-                  data.category === category.id && styles.categoryTextSelected
-                ]}>
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {loadingCategories ? (
+            <Text style={styles.helperText}>Loading categories...</Text>
+          ) : (
+            <View style={styles.categoryGrid}>
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryItem,
+                    data.category === category.id && styles.categoryItemSelected
+                  ]}
+                  onPress={() => onUpdate({ category: category.id, categoryName: category.name })}
+                >
+                  <Ionicons
+                    name={category.icon}
+                    size={24}
+                    color={data.category === category.id ? Colors.neutral0 : Colors.textSecondary}
+                  />
+                  <Text style={[
+                    styles.categoryText,
+                    data.category === category.id && styles.categoryTextSelected
+                  ]}>
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
         </View>
 
@@ -192,7 +227,7 @@ const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
           <TextInput
             style={styles.input}
             placeholder="$0.00"
-            value={data.originalPrice}
+            value={data.originalPrice || ''}
             onChangeText={(text) => onUpdate({ originalPrice: text })}
             keyboardType="numeric"
           />
@@ -205,7 +240,7 @@ const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
             Add keywords to help others find your item
           </Text>
           <View style={styles.tagsContainer}>
-            {data.tags.map((tag, index) => (
+            {(data.tags || []).map((tag, index) => (
               <View key={index} style={styles.tag}>
                 <Text style={styles.tagText}>{tag}</Text>
                 <TouchableOpacity onPress={() => removeTag(tag)}>
@@ -241,7 +276,6 @@ const AddProductStep1 = ({ data, onUpdate, onNext, onBack }) => {
 };
 
 // AddProductStep2.js - Images
-
 const { width } = Dimensions.get('window');
 const imageSize = (width - 48) / 3;
 
@@ -250,53 +284,114 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
   const [activeTab, setActiveTab] = useState('home');
 
   const openImagePicker = () => {
+    // Use React Native's built-in ActionSheet or Alert instead of custom alert
     Alert.alert(
       'Add Photo',
       'Choose how you want to add a photo',
       [
-        { text: 'Camera', onPress: () => pickFromCamera() },
-        { text: 'Gallery', onPress: () => pickFromGallery() },
-        { text: 'Cancel', style: 'cancel' },
-      ]
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Camera',
+          onPress: () => pickFromCamera(),
+        },
+        {
+          text: 'Gallery',
+          onPress: () => pickFromGallery(),
+        },
+      ],
+      { cancelable: true }
     );
   };
 
-  const pickFromCamera = () => {
-    // Implement camera picker
-    // For demo, adding a placeholder image
-    const newImage = {
-      id: Date.now(),
-      uri: 'https://via.placeholder.com/300x300/e0e0e0/666666?text=Camera+Photo',
-      type: 'camera'
-    };
-    onUpdate({ images: [...data.images, newImage] });
+  const pickFromCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied',
+          'Sorry, we need camera permissions to make this work!',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        const newImage = {
+          id: Date.now(),
+          uri: result.assets[0].uri,
+          type: 'camera'
+        };
+        onUpdate({ images: [...(data.images || []), newImage] });
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      Alert.alert('Error', 'Failed to access camera');
+    }
   };
 
-  const pickFromGallery = () => {
-    // Implement gallery picker
-    // For demo, adding a placeholder image
-    const newImage = {
-      id: Date.now(),
-      uri: 'https://via.placeholder.com/300x300/e0e0e0/666666?text=Gallery+Photo',
-      type: 'gallery'
-    };
-    onUpdate({ images: [...data.images, newImage] });
+  const pickFromGallery = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied',
+          'Sorry, we need gallery permissions to make this work!',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        allowsMultipleSelection: true,
+        selectionLimit: maxImages - (data.images || []).length,
+      });
+
+      if (!result.canceled) {
+        const newImages = result.assets.map((asset, index) => ({
+          id: Date.now() + index,
+          uri: asset.uri,
+          type: 'gallery'
+        }));
+        onUpdate({ images: [...(data.images || []), ...newImages] });
+      }
+    } catch (error) {
+      console.error('Gallery error:', error);
+      Alert.alert('Error', 'Failed to access gallery');
+    }
   };
 
   const removeImage = (imageId) => {
-    onUpdate({ images: data.images.filter(img => img.id !== imageId) });
+    onUpdate({ images: (data.images || []).filter(img => img.id !== imageId) });
   };
 
   const reorderImages = (fromIndex, toIndex) => {
-    const newImages = [...data.images];
+    const newImages = [...(data.images || [])];
     const movedImage = newImages.splice(fromIndex, 1)[0];
     newImages.splice(toIndex, 0, movedImage);
     onUpdate({ images: newImages });
   };
 
   const handleNext = () => {
-    if (data.images.length === 0) {
-      Alert.alert('Photos Required', 'Please add at least one photo of your item');
+    if (!data.images || data.images.length === 0) {
+      Alert.alert(
+        'Photos Required',
+        'Please add at least one photo of your item to continue.',
+        [{ text: 'OK' }]
+      );
       return;
     }
     onNext();
@@ -339,7 +434,7 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
         <View style={styles.section}>
           <View style={styles.photoGrid}>
             {/* Add Photo Button */}
-            {data.images.length < maxImages && (
+            {(!data.images || data.images.length < maxImages) && (
               <TouchableOpacity style={styles.addPhotoButton} onPress={openImagePicker}>
                 <Ionicons name="camera" size={32} color={Colors.primary} />
                 <Text style={styles.addPhotoText}>Add Photo</Text>
@@ -347,7 +442,7 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
             )}
 
             {/* Existing Photos */}
-            {data.images.map((image, index) => (
+            {(data.images || []).map((image, index) => (
               <View key={image.id} style={styles.photoItem}>
                 <Image source={{ uri: image.uri }} style={styles.photoImage} />
                 
@@ -376,7 +471,7 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
                       <Ionicons name="arrow-up" size={12} color={Colors.surface} />
                     </TouchableOpacity>
                   )}
-                  {index < data.images.length - 1 && (
+                  {index < (data.images || []).length - 1 && (
                     <TouchableOpacity
                       style={styles.reorderButton}
                       onPress={() => reorderImages(index, index + 1)}
@@ -389,7 +484,7 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
             ))}
           </View>
 
-          {data.images.length > 0 && (
+          {data.images && data.images.length > 0 && (
             <Text style={styles.photoCountText}>
               {data.images.length} of {maxImages} photos added
             </Text>
@@ -422,30 +517,56 @@ const AddProductStep2 = ({ data, onUpdate, onNext, onBack }) => {
           <Ionicons name="arrow-forward" size={20} color={Colors.surface} />
         </TouchableOpacity>
       </View>
+
       <BottomNavigation activeTab={'AddProduct'} onTabPress={setActiveTab} />
     </View>
   );
 };
 
 // AddProductStep3.js - What You Want
-
 const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
   const [errors, setErrors] = useState({});
   const [newWantedItem, setNewWantedItem] = useState('');
+  const [newWantedItemDesc, setNewWantedItemDesc] = useState('');
   const [activeTab, setActiveTab] = useState('home');
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
-  const categories = [
-    { id: 'electronics', name: 'Electronics', icon: 'phone-portrait-outline' },
-    { id: 'fashion', name: 'Fashion & Accessories', icon: 'shirt-outline' },
-    { id: 'home', name: 'Home & Garden', icon: 'home-outline' },
-    { id: 'books', name: 'Books & Media', icon: 'book-outline' },
-    { id: 'sports', name: 'Sports & Outdoors', icon: 'basketball-outline' },
-    { id: 'toys', name: 'Toys & Games', icon: 'game-controller-outline' },
-    { id: 'vehicles', name: 'Vehicles & Parts', icon: 'car-outline' },
-    { id: 'collectibles', name: 'Collectibles & Art', icon: 'diamond-outline' },
-    { id: 'music', name: 'Musical Instruments', icon: 'musical-notes-outline' },
-    { id: 'anything', name: 'Open to Anything', icon: 'gift-outline' },
-  ];
+    useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/category/findall`);
+        if (response.data.success) {
+          // Map the categories to match the expected structure
+          const mappedCategories = response.data.categories.map(category => ({
+            id: category.id.toString(),
+            name: category.name,
+            icon: category.icon || 'help-circle-outline' // Default icon if not provided
+          }));
+          setCategories(mappedCategories);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        // Fallback to hardcoded categories if API fails
+        setCategories([
+          { id: '1', name: 'Electronics', icon: 'phone-portrait-outline' },
+          { id: '2', name: 'Fashion', icon: 'shirt-outline' },
+          { id: '3', name: 'Home & Garden', icon: 'home-outline' },
+          { id: '4', name: 'Sports & Outdoors', icon: 'basketball-outline' },
+          { id: '5', name: 'Books & Media', icon: 'book-outline' },
+          { id: '6', name: 'Toys & Games', icon: 'game-controller-outline' },
+          { id: '7', name: 'Automotive', icon: 'car-outline' },
+          { id: '8', name: 'Health & Beauty', icon: 'heart-outline' },       // better fit
+          { id: '9', name: 'Art & Collectibles', icon: 'color-palette-outline' }, // paints/art
+          { id: '10', name: 'Others', icon: 'albums-outline' }               // generic/misc
+        ]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const conditions = [
     { id: 'any', name: 'Any Condition', desc: 'I\'m flexible with condition' },
@@ -473,7 +594,7 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (data.wantedItems.length === 0) {
+    if (!data.wantedItems || data.wantedItems.length === 0) {
       newErrors.wantedItems = 'Please add at least one item you want';
     }
     
@@ -488,14 +609,19 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
   };
 
   const addWantedItem = () => {
-    if (newWantedItem.trim() && !data.wantedItems.includes(newWantedItem.trim())) {
-      onUpdate({ wantedItems: [...data.wantedItems, newWantedItem.trim()] });
+    if (newWantedItem.trim() && !(data.wantedItems || []).some(item => item.name === newWantedItem.trim())) {
+      const newItem = {
+        name: newWantedItem.trim(),
+        description: newWantedItemDesc.trim() || null
+      };
+      onUpdate({ wantedItems: [...(data.wantedItems || []), newItem] });
       setNewWantedItem('');
+      setNewWantedItemDesc('');
     }
   };
 
   const removeWantedItem = (itemToRemove) => {
-    onUpdate({ wantedItems: data.wantedItems.filter(item => item !== itemToRemove) });
+    onUpdate({ wantedItems: (data.wantedItems || []).filter(item => item.name !== itemToRemove) });
   };
 
   return (
@@ -538,11 +664,25 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
                 <Ionicons name="add" size={24} color={Colors.surface} />
               </TouchableOpacity>
             </View>
+            
+            <TextInput
+              style={[styles.addItemInput, { marginTop: 8 }]}
+              placeholder="Optional description..."
+              value={newWantedItemDesc}
+              onChangeText={setNewWantedItemDesc}
+              multiline
+              numberOfLines={2}
+            />
 
-            {data.wantedItems.map((item, index) => (
+            {(data.wantedItems || []).map((item, index) => (
               <View key={index} style={styles.wantedItem}>
-                <Text style={styles.wantedItemText}>{item}</Text>
-                <TouchableOpacity onPress={() => removeWantedItem(item)}>
+                <View style={styles.wantedItemContent}>
+                  <Text style={styles.wantedItemText}>{item.name}</Text>
+                  {item.description && (
+                    <Text style={styles.wantedItemDesc}>{item.description}</Text>
+                  )}
+                </View>
+                <TouchableOpacity onPress={() => removeWantedItem(item.name)}>
                   <Ionicons name="close" size={20} color={Colors.danger} />
                 </TouchableOpacity>
               </View>
@@ -557,30 +697,34 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
           <Text style={styles.sectionSubtitle}>
             Help narrow down what type of items you're most interested in
           </Text>
-          <View style={styles.categoryGrid}>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryItem,
-                  data.wantedCategory === category.id && styles.categoryItemSelected
-                ]}
-                onPress={() => onUpdate({ wantedCategory: category.id })}
-              >
-                <Ionicons
-                  name={category.icon}
-                  size={20}
-                  color={data.wantedCategory === category.id ? Colors.neutral0 : Colors.textSecondary}
-                />
-                <Text style={[
-                  styles.categoryText,
-                  data.wantedCategory === category.id && styles.categoryTextSelected
-                ]}>
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {loadingCategories ? (
+            <Text style={styles.helperText}>Loading categories...</Text>
+          ) : (
+            <View style={styles.categoryGrid}>
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryItem,
+                    data.wantedCategory === category.id && styles.categoryItemSelected
+                  ]}
+                  onPress={() => onUpdate({ wantedCategory: category.id })}
+                >
+                  <Ionicons
+                    name={category.icon}
+                    size={20}
+                    color={data.wantedCategory === category.id ? Colors.neutral0 : Colors.textSecondary}
+                  />
+                  <Text style={[
+                    styles.categoryText,
+                    data.wantedCategory === category.id && styles.categoryTextSelected
+                  ]}>
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Minimum Condition */}
@@ -698,7 +842,7 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
               </Text>
             </View>
             <Switch
-              value={data.negotiable}
+              value={data.negotiable || false}
               onValueChange={(value) => onUpdate({ negotiable: value })}
               trackColor={{ false: Colors.neutral200, true: Colors.primaryLight }}
               thumbColor={data.negotiable ? Colors.primary : Colors.neutral400}
@@ -715,13 +859,13 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
           <TextInput
             style={styles.textArea}
             placeholder="e.g., Prefer local pickup, looking for vintage items, interested in bundles..."
-            value={data.additionalNotes}
+            value={data.additionalNotes || ''}
             onChangeText={(text) => onUpdate({ additionalNotes: text })}
             multiline
             numberOfLines={3}
             maxLength={300}
           />
-          <Text style={styles.helperText}>{data.additionalNotes.length}/300 characters</Text>
+          <Text style={styles.helperText}>{(data.additionalNotes || '').length}/300 characters</Text>
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -745,27 +889,9 @@ const AddProductStep3 = ({ data, onUpdate, onNext, onBack }) => {
 };
 
 // SwapPreview.js - Final Review and Submit
-
 const SwapPreview = ({ data, onSubmit, onBack, onEdit }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
-
-  const getCategoryName = (categoryId) => {
-    const categories = {
-      electronics: 'Electronics',
-      fashion: 'Fashion & Accessories',
-      home: 'Home & Garden',
-      books: 'Books & Media',
-      sports: 'Sports & Outdoors',
-      toys: 'Toys & Games',
-      vehicles: 'Vehicles & Parts',
-      collectibles: 'Collectibles & Art',
-      music: 'Musical Instruments',
-      other: 'Other',
-      anything: 'Open to Anything',
-    };
-    return categories[categoryId] || categoryId;
-  };
 
   const getConditionName = (conditionId) => {
     const conditions = {
@@ -862,15 +988,15 @@ const SwapPreview = ({ data, onSubmit, onBack, onEdit }) => {
           </View>
 
           <View style={styles.previewCard}>
-            <Text style={styles.itemTitle}>{data.title}</Text>
-            <Text style={styles.itemCategory}>{getCategoryName(data.category)}</Text>
+            <Text style={styles.itemTitle}>{data.title || ''}</Text>
+            <Text style={styles.itemCategory}>{data.categoryName}</Text>
             <Text style={styles.itemCondition}>Condition: {getConditionName(data.condition)}</Text>
             {data.originalPrice && (
               <Text style={styles.itemPrice}>Original Price: {data.originalPrice}</Text>
             )}
-            <Text style={styles.itemDescription}>{data.description}</Text>
+            <Text style={styles.itemDescription}>{data.description || ''}</Text>
             
-            {data.tags.length > 0 && (
+            {data.tags && data.tags.length > 0 && (
               <View style={styles.tagsContainer}>
                 {data.tags.map((tag, index) => (
                   <View key={index} style={styles.previewTag}>
@@ -885,14 +1011,14 @@ const SwapPreview = ({ data, onSubmit, onBack, onEdit }) => {
         {/* Photos */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Photos ({data.images.length})</Text>
+            <Text style={styles.sectionTitle}>Photos ({(data.images || []).length})</Text>
             <TouchableOpacity onPress={() => onEdit(2)}>
               <Text style={styles.editLink}>Edit</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
-            {data.images.map((image, index) => (
+            {(data.images || []).map((image, index) => (
               <View key={image.id} style={styles.previewPhoto}>
                 <Image source={{ uri: image.uri }} style={styles.previewPhotoImage} />
                 {index === 0 && (
@@ -916,13 +1042,18 @@ const SwapPreview = ({ data, onSubmit, onBack, onEdit }) => {
 
           <View style={styles.previewCard}>
             <Text style={styles.wantedTitle}>Looking for:</Text>
-            {data.wantedItems.map((item, index) => (
-              <Text key={index} style={styles.wantedItem}>• {item}</Text>
+            {(data.wantedItems || []).map((item, index) => (
+              <View key={index} style={styles.wantedItemPreview}>
+                <Text style={styles.wantedItemPreviewText}>• {item.name}</Text>
+                {item.description && (
+                  <Text style={styles.wantedItemPreviewDesc}>  {item.description}</Text>
+                )}
+              </View>
             ))}
 
             {data.wantedCategory && (
               <Text style={styles.wantedDetail}>
-                Preferred Category: {getCategoryName(data.wantedCategory)}
+                Preferred Category: {data.wantedCategoryName}
               </Text>
             )}
 
@@ -1047,6 +1178,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 20,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  editLink: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
 
   // Form Elements
   input: {
@@ -1113,7 +1255,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   categoryTextSelected: {
-    color: Colors.primary,
+    color: Colors.neutral0,
     fontWeight: '500',
   },
 
@@ -1174,6 +1316,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
+    marginTop: 12,
   },
   tag: {
     flexDirection: 'row',
@@ -1313,104 +1456,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
 
-  // Footer
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: Colors.primary,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  nextButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
-  },
-  nextButtonText: {
-    fontSize: 16,
-    color: Colors.surface,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-
-  bottomSpacing: {
-    height: 20,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  
-  // Progress
-  progressContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: Colors.surface,
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: Colors.neutral200,
-    borderRadius: 2,
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-
-  // Sections
-  section: {
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  editLink: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: '500',
-  },
-
-  // Form Elements
+  // Step 3 specific styles
   addItemContainer: {
     flexDirection: 'row',
     marginBottom: 12,
@@ -1453,94 +1499,13 @@ const styles = StyleSheet.create({
     color: Colors.text,
     flex: 1,
   },
-  textArea: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: Colors.text,
-    backgroundColor: Colors.neutral50,
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  helperText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 4,
-    textAlign: 'right',
-  },
-  errorText: {
-    fontSize: 12,
-    color: Colors.danger,
-    marginTop: 4,
-  },
-
-  // Categories
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.neutral50,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 8,
-  },
-  categoryItemSelected: {
-    backgroundColor: Colors.primaryLight,
-    borderColor: Colors.primary,
-  },
-  categoryText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: Colors.text,
-  },
-  categoryTextSelected: {
-    color: Colors.neutral0,
-    fontWeight: '500',
-  },
-
-  conditionContent: {
+  wantedItemContent: {
     flex: 1,
   },
-  conditionName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.text,
-  },
-  conditionNameSelected: {
-    color: Colors.primary,
-  },
-  conditionDesc: {
+  wantedItemDesc: {
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 2,
-  },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioButtonSelected: {
-    borderColor: Colors.primary,
-  },
-  radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
   },
 
   // Swap Preferences
@@ -1599,6 +1564,156 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 4,
   },
+
+  // Preview styles
+  previewCard: {
+    backgroundColor: Colors.neutral50,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  itemTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  itemCategory: {
+    fontSize: 14,
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  itemCondition: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  itemPrice: {
+    fontSize: 14,
+    color: Colors.success,
+    marginBottom: 8,
+  },
+  itemDescription: {
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  previewTag: {
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  previewTagText: {
+    fontSize: 12,
+    color: Colors.primary,
+  },
+  photoScroll: {
+    marginTop: 8,
+  },
+  previewPhoto: {
+    position: 'relative',
+    width: 80,
+    height: 80,
+    marginRight: 8,
+  },
+  previewPhotoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: Colors.neutral200,
+  },
+  wantedTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  wantedItemPreview: {
+    marginBottom: 4,
+  },
+  wantedItemPreviewText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  wantedItemPreviewDesc: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  wantedDetail: {
+    fontSize: 14,
+    color: Colors.text,
+    marginTop: 8,
+  },
+  wantedNotes: {
+    fontSize: 14,
+    color: Colors.text,
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  guidelinesContainer: {
+    backgroundColor: Colors.successLight,
+    padding: 12,
+    borderRadius: 8,
+  },
+  guidelinesTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.success,
+    marginBottom: 8,
+  },
+  guidelineText: {
+    fontSize: 12,
+    color: Colors.success,
+    marginBottom: 2,
+  },
+
+  // Footer
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  nextButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  nextButtonText: {
+    fontSize: 16,
+    color: Colors.surface,
+    fontWeight: '600',
+    marginRight: 8,
+  },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1614,7 +1729,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.surface,
     fontWeight: '600',
-    marginRight: 8,
+    marginLeft: 8,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+
+  bottomSpacing: {
+    height: 20,
   },
 });
 

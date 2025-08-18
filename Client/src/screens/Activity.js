@@ -42,7 +42,7 @@ const ActivityPage = () => {
     },
     {
       id: 2,
-      title: 'My Listings',
+      title: 'My Products',
       subtitle: 'Items you\'re offering for swap',
       icon: 'list',
       color: Colors.success,

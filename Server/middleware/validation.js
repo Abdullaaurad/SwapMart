@@ -74,8 +74,29 @@ const validateOnboarding = (req, res, next) => {
   next();
 };
 
+const validateProfileUpdate = (req, res, next) => {
+  const { email, phone } = req.body;
+  
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({
+      success: false,
+      message: 'Valid email is required'
+    });
+  }
+  
+  if (!phone || phone.length < 10) {
+    return res.status(400).json({
+      success: false,
+      message: 'Valid phone number is required'
+    });
+  }
+  
+  next();
+};
+
 module.exports = {
   validateSignUp,
   validateLogin,
-  validateOnboarding
+  validateOnboarding,
+  validateProfileUpdate
 }; 

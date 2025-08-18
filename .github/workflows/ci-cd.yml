@@ -24,12 +24,12 @@ jobs:
           cd Client
           npm ci
 
-      - name: Lint (optional)
+      - name: Lint  
         run: |
           cd Client
           if [ -f package.json ] && jq -e '.scripts.lint' package.json > /dev/null; then npm run lint; else echo "No lint script"; fi
 
-      - name: Run tests (optional)
+      - name: Run tests  
         run: |
           cd Client
           if [ -f package.json ] && jq -e '.scripts.test' package.json > /dev/null; then npm test; else echo "No test script"; fi
@@ -37,9 +37,9 @@ jobs:
       - name: Build Expo app (web)
         run: |
           cd Client
-          npx expo build:web
+          npx expo start
 
-      - name: Publish to Expo (optional)
+      - name: Publish to Expo  
         if: env.EXPO_TOKEN != null && env.EXPO_TOKEN != ''
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

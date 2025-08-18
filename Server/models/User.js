@@ -14,7 +14,7 @@ class User {
 
   static async getUserHeader(userId){
     const result = await db.query(
-      'SELECT fullName , profile_image, FROM users WHERE id = $1',
+      'SELECT fullname, profile_image FROM users WHERE id = $1',
       [userId]
     );
     return result.rows[0] || null;
@@ -75,29 +75,30 @@ class User {
 
   static async getUserProfile(userId) {
     const result = await db.query(
-      'SELECT username, fullName, email, phone, profile_image, bio, location, latitude, longitude FROM users WHERE id = $1',
+      'SELECT username, fullname, email, phone, profile_image, bio, location, latitude, longitude FROM users WHERE id = $1',
       [userId]
     );
     return result.rows[0] || null;
   }
 
   static async updateProfile(userId, profileData) {
-    const { email, phone, profile_image, bio, location, latitude, longitude } = profileData;
+    const { fullname, email, phone, profile_image, bio, location, latitude, longitude } = profileData;
     
     const result = await db.query(
-      `UPDATE users 
-       SET email = COALESCE($1, email),
-           phone = COALESCE($2, phone),
-           profile_image = COALESCE($3, profile_image),
-           bio = COALESCE($4, bio),
-           location = COALESCE($5, location),
-           latitude = COALESCE($6, latitude),
-           longitude = COALESCE($7, longitude),
+      `UPDATE users
+       SET fullname = COALESCE($1, fullname),
+           email = COALESCE($2, email),
+           phone = COALESCE($3, phone),
+           profile_image = COALESCE($4, profile_image),
+           bio = COALESCE($5, bio),
+           location = COALESCE($6, location),
+           latitude = COALESCE($7, latitude),
+           longitude = COALESCE($8, longitude),
            onboard = true,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8 
+       WHERE id = $9
        RETURNING *`,
-      [email, phone, profile_image, bio, location, latitude, longitude, userId]
+      [fullname, email, phone, profile_image, bio, location, latitude, longitude, userId]
     );
     
     return result.rows[0];
@@ -111,6 +112,22 @@ class User {
       [hashedPassword, userId]
     );
     return "success";
+  }
+
+  static async delegateAccount(userId) {
+    const result = await db.query(
+      'DELETE FROM Users where id = $1 RETURNING *',
+      [userId]
+    );
+    if (result.rows.length === 0) {
+      throw new Error('User not found');
+    }
+    const deleteProducts = await db.query(
+      'DELETE FROM products WHERE user_id = $1',
+      [userId]
+    );
+
+    return result.rows[0];
   }
 }
 

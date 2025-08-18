@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   SafeAreaView,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Colors from '../constants/colors';
@@ -35,29 +38,45 @@ const LogIn = ({
   const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
-    const [alertConfig, setAlertConfig] = useState({
-      visible: false,
-      title: '',
-      message: '',
-      type: 'info',
-      buttonType: 'none',
-      onClose: () => { },
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    buttonType: 'none',
+    onClose: () => { },
+  });
+
+  // Listen for keyboard events
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
     });
-  
-    const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
-      setAlertConfig({
-        visible: true,
-        title,
-        message,
-        type,
-        buttonType,
-        onClose: () => {
-          setAlertConfig(prev => ({ ...prev, visible: false }));
-          onClose();
-        },
-      });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidHideListener?.remove();
+      keyboardDidShowListener?.remove();
     };
+  }, []);
+
+  const showAlert = (title, message, type = 'info', buttonType = 'none', onClose = () => { }) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttonType,
+      onClose: () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        onClose();
+      },
+    });
+  };
 
   const handleUsernameChange = (text) => {
     setUsername(text);
@@ -80,71 +99,71 @@ const LogIn = ({
   };
 
   const handleLogIn = async () => {
-  clearFieldErrors();
-  
-  // Basic validation
-  if (!username.trim() || !password.trim()) {
-    if (!username.trim()) {
-      setUsernameError('Username is required');
+    clearFieldErrors();
+    
+    // Basic validation
+    if (!username.trim() || !password.trim()) {
+      if (!username.trim()) {
+        setUsernameError('Username is required');
+      }
+      if (!password.trim()) {
+        setPasswordError('Password is required');
+      }
+      return;
     }
-    if (!password.trim()) {
-      setPasswordError('Password is required');
-    }
-    return;
-  }
-  setIsLoading(true);
+    setIsLoading(true);
 
-  try {
-    const response = await axios.post(`${BASE_URL}/users/login`, {
-      username,
-      password,
-    });
+    try {
+      const response = await axios.post(`${BASE_URL}/users/login`, {
+        username,
+        password,
+      });
 
-            if (response.data.success) {
-          const { token, user } = response.data;
-          
-          try {
-            if (token) {
-              await AsyncStorage.setItem('jwt_token', token);
-            }
-            if (token) {
-              axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            }
-            console.log(response.data);
-            
-            showAlert(
-              'Success',
-              'Login successful!',
-              'success',
-              'none',
-              () => {
-                // Check if user has completed onboarding
-                if (user.onboard) {
-                  navigation.navigate('Home');
-                } else {
-                  navigation.navigate('Onboarding', { userId: user.id });
-                }
-              }
-            );
+      if (response.data.success) {
+        const { token, user } = response.data;
         
-      } catch (storageError) {
-        console.error('Storage error:', storageError);
-        showAlert(
-          'Warning',
-          'Login successful, but failed to save session data.',
-          'warning',
-          'single'
-        );
+        try {
+          if (token) {
+            await AsyncStorage.setItem('jwt_token', token);
+          }
+          if (token) {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          }
+          console.log(response.data);
+          
+          showAlert(
+            'Success',
+            'Login successful!',
+            'success',
+            'none',
+            () => {
+              // Check if user has completed onboarding
+              if (user.onboard) {
+                navigation.navigate('Home');
+              } else {
+                navigation.navigate('Onboarding', { userId: user.id });
+              }
+            }
+          );
+      
+        } catch (storageError) {
+          console.error('Storage error:', storageError);
+          showAlert(
+            'Warning',
+            'Login successful, but failed to save session data.',
+            'warning',
+            'single'
+          );
+        }
+        
+      } else {
+        const errorMessage = response.data.message || 'Something went wrong';
+        if (!fieldErrorHandled) {
+          showAlert('Login Failed', errorMessage, 'error', 'single');
+        }
       }
       
-    } else {
-      const errorMessage = response.data.message || 'Something went wrong';
-      if (!fieldErrorHandled) {
-        showAlert('Login Failed', errorMessage, 'error', 'single');
-      }
-    }
-    
-  } catch (error) {    
+    } catch (error) {    
       if (error.response) {
         // Server responded with error status
         const errorMessage = error.response.data?.message || 'Login failed';
@@ -171,115 +190,127 @@ const LogIn = ({
         // Other error
         showAlert('Error', 'An unexpected error occurred. Please try again.', 'error', 'single');
       }
-  } finally {
-    setIsLoading(false);
-  }
-};
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Logo */}
-        <View style={styles.iconContainer}>
-          <Image
-            source={require('../assets/logo_dark_no_bg_no_name.png')}
-            style={styles.Logo}
-          />
-        </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <View style={styles.content}>
+          {/* Logo - Hide when keyboard is visible */}
+          {!isKeyboardVisible && (
+            <View style={styles.iconContainer}>
+              <Image
+                source={require('../assets/logo_dark_no_bg_no_name.png')}
+                style={styles.Logo}
+              />
+            </View>
+          )}
 
-        {/* Welcome Text */}
-        <Text style={styles.welcomeTitle}>Welcome Back</Text>
-        <Text style={styles.welcomeSubtitle}>Sign in to your car account</Text>
+          {/* Welcome Text */}
+          { !isKeyboardVisible && (
+            <>
+              <Text style={styles.welcomeTitle}>Welcome Back</Text>
+              <Text style={styles.welcomeSubtitle}>Sign in to your car account</Text>
+            </>
+          )}
 
-        <FormBox>
-          {/* Username Input */}
-          <FormInput
-            label="Username"
-            placeholder="Enter your username"
-            iconName="person-outline"
-            value={username}
-            onChangeText={handleUsernameChange}
-            autoCapitalize="none"
-            autoCorrect={false}
-            error={usernameError}
-          />
+          <FormBox>
+            {/* Username Input */}
+            <FormInput
+              label="Username"
+              placeholder="Enter your username"
+              iconName="person-outline"
+              value={username}
+              onChangeText={handleUsernameChange}
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={usernameError}
+            />
 
-          {/* Password Input */}
-          <FormInput
-            label="Password"
-            placeholder="Enter your password"
-            iconName="lock-closed-outline"
-            value={password}
-            onChangeText={handlePasswordChange}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            error={passwordError}
-          />
+            {/* Password Input */}
+            <FormInput
+              label="Password"
+              placeholder="Enter your password"
+              iconName="lock-closed-outline"
+              value={password}
+              onChangeText={handlePasswordChange}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={passwordError}
+            />
 
-          {/* Remember Me & Forgot Password */}
-          <View style={styles.optionsRow}>
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity
-                style={styles.rememberMeContainer}
-                onPress={() => setRememberMe(!rememberMe)}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    rememberMe && styles.checkboxChecked,
-                  ]}
+            {/* Remember Me & Forgot Password */}
+            <View style={styles.optionsRow}>
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity
+                  style={styles.rememberMeContainer}
+                  onPress={() => setRememberMe(!rememberMe)}
                 >
-                  {rememberMe && (
-                    <Icon name="checkmark" size={12} color="white" />
-                  )}
-                </View>
+                  <View
+                    style={[
+                      styles.checkbox,
+                      rememberMe && styles.checkboxChecked,
+                    ]}
+                  >
+                    {rememberMe && (
+                      <Icon name="checkmark" size={12} color="white" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+                <Text style={styles.rememberMeText}>Remember me</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  navigation.navigate('ForgotPassword');
+                }}
+              >
+                <Link link="Forgot password?" />
               </TouchableOpacity>
-              <Text style={styles.rememberMeText}>Remember me</Text>
             </View>
 
+            {/* Sign In Button */}
+            <AnimatedButton
+              title={isLoading ? 'Login...' : 'Log In'}
+              onPress={handleLogIn}
+              style={{ marginBottom: 24 }}
+            />
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>Or continue with</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Social Login Buttons */}
+            <SocialLoginButtons
+              onGoogleLogin={onGoogleLogin}
+              onAppleLogin={onAppleLogin}
+            />
+          </FormBox>
+
+          {/* Sign Up Link */}
+          <View style={styles.signUpContainer}>
+            <Text style={styles.signUpText}>Don't have an account? </Text>
             <TouchableOpacity
               onPress={() => {
-                navigation.navigate('ForgotPassword');
+                navigation.navigate('SignUp');
               }}
             >
-              <Link link="Forgot password?" />
+              <Link link="Sign up" style={{marginBottom: 25}}/>
             </TouchableOpacity>
           </View>
-
-          {/* Sign In Button */}
-          <AnimatedButton
-            title={isLoading ? 'Login...' : 'Log In'}
-            onPress={handleLogIn}
-            style={{ marginBottom: 24 }}
-          />
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social Login Buttons */}
-          <SocialLoginButtons
-            onGoogleLogin={onGoogleLogin}
-            onAppleLogin={onAppleLogin}
-          />
-        </FormBox>
-
-        {/* Sign Up Link */}
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Don't have an account? </Text>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('SignUp');
-            }}
-          >
-            <Link link="Sign up" style={{marginBottom: 25}}/>
-          </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
 
       <CustomAlert
         visible={alertConfig.visible}
@@ -289,7 +320,6 @@ const LogIn = ({
         buttonType={alertConfig.buttonType}
         onClose={alertConfig.onClose}
       />
-
     </SafeAreaView>
   );
 };
@@ -298,6 +328,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primarybg,
+  },
+  keyboardView: {
+    flex: 1,
   },
   content: {
     flex: 1,

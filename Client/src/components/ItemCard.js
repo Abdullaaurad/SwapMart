@@ -18,7 +18,7 @@ const ItemCard = ({ item, onPressFavorite }) => {
           style={styles.itemImage}
         />
 
-        {item.isHot && (
+        {/* {item.isHot && (
           <View style={styles.hotBadge}>
             <Ionicons name="flame-outline" size={12} color={Colors.surface} />
             <Text style={styles.hotBadgeText}>Hot</Text>
@@ -30,7 +30,7 @@ const ItemCard = ({ item, onPressFavorite }) => {
           onPress={() => onPressFavorite?.(item)}
         >
           <Ionicons name="heart-outline" size={16} color={Colors.textSecondary} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <View style={styles.itemContent}>

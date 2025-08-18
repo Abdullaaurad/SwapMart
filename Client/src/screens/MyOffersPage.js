@@ -1,5 +1,5 @@
 // MyOffersPage.js - Offers made to other users
-import React from 'react';
+import React,{useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -14,63 +14,25 @@ import Colors from '../constants/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
 
 const MyOffersPage = () => {
   const navigation = useNavigation();
-
-  const myOffers = [
-    {
-      id: 1,
-      targetItem: {
-        name: 'iPhone 15 Pro',
-        image: require('../assets/IPhone14.jpeg'),
-        owner: 'Alice Johnson'
-      },
-      offeredItem: {
-        name: 'MacBook Pro M2',
-        image: require('../assets/Mac.jpeg'),
-        condition: 'Excellent'
-      },
-      offerDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      status: 'pending',
-      message: 'Hi! I\'d love to swap my MacBook for your iPhone. It\'s in excellent condition.',
-      response: null
-    },
-    {
-      id: 2,
-      targetItem: {
-        name: 'Gaming Chair',
-        image: require('../assets/chair.jpeg'),
-        owner: 'Bob Smith'
-      },
-      offeredItem: {
-        name: 'Standing Desk',
-        image: require('../assets/desk.jpeg'),
-        condition: 'Good'
-      },
-      offerDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      status: 'accepted',
-      message: 'Perfect swap for my home office setup!',
-      response: 'Great! Let\'s arrange the swap.'
-    },
-    {
-      id: 3,
-      targetItem: {
-        name: 'Camera Lens',
-        image: require('../assets/lens.jpeg'),
-        owner: 'Carol White'
-      },
-      offeredItem: {
-        name: 'Tripod Set',
-        image: require('../assets/tripod.jpeg'),
-        condition: 'Like New'
-      },
-      offerDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      status: 'declined',
-      message: 'Would love to trade my tripod set for your lens.',
-      response: 'Thanks, but I need something different.'
-    }
-  ];
+  const [myOffers, setMyOffers] = useState([]);
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/offers/my-offers`);
+        if (response.data.success) {
+          setMyOffers(response.data.offers); // <-- use setMyOffers
+        }
+      } catch (error) {
+        console.error('Error fetching offers:', error);
+      }
+    };
+    fetchOffers();
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {

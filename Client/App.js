@@ -7,7 +7,6 @@ import LogIn from './src/screens/LogIn';
 import SignUp from './src/screens/SignUp';
 import ForgotPassword from './src/screens/ForgotPassword';
 import Verification from './src/screens/Verification';
-import LoadingScreen from './src/screens/LoadingScreen';
 import Onboarding from './src/screens/Onboarding';
 
 import Profile from './src/screens/Profile';
@@ -38,6 +37,8 @@ import RecentlyViewed from './src/screens/RecentlyViewedPage';
 import ReviewsRatings from './src/screens/ReviewsRatingsPage';
 import SavedItems from './src/screens/SavedItemsPage';
 import SwapHistory from './src/screens/SwapHistory';
+import MyProductDetails from './src/screens/MyProductDetails';
+import ProductDetails from './src/screens/ProductDetails';
 
 const Stack = createNativeStackNavigator();
 
@@ -56,7 +57,6 @@ export default function App() {
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
         <Stack.Screen name="ResetPassword" component={ResetPassword} />
         <Stack.Screen name="Verification" component={Verification} />
-        <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
 
         {/* Main App Screens */}
         <Stack.Screen name="Profile" component={Profile} />
@@ -87,6 +87,8 @@ export default function App() {
         <Stack.Screen name="ReviewsRatings" component={ReviewsRatings} />
         <Stack.Screen name="SavedItems" component={SavedItems} />
         <Stack.Screen name="SwapHistory" component={SwapHistory} />
+        <Stack.Screen name="MyProductDetails" component={MyProductDetails} />
+        <Stack.Screen name="ProductDetails" component={ProductDetails} />
         
       </Stack.Navigator>
     </NavigationContainer>

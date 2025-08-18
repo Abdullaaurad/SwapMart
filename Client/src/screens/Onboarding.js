@@ -10,6 +10,8 @@ import {
   ScrollView,
   Platform,
   PermissionsAndroid,
+  KeyboardAvoidingView,
+  Keyboard,
 } from "react-native";
 import Colors from "../constants/colors";
 import FormBox from "../components/FormBox";
@@ -30,7 +32,7 @@ const OnboardingScreen = ({ route }) => {
   
   const [userId, setUserId] = useState(null);
   const [jwtToken, setJwtToken] = useState(null);
-  const [fullname, setFullName] = useState("");
+  const [fullname, setfullname] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
@@ -40,6 +42,7 @@ const OnboardingScreen = ({ route }) => {
   const [longitude, setLongitude] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   const [verificationStatus, setVerificationStatus] = useState({
     email: false,
@@ -69,6 +72,21 @@ const OnboardingScreen = ({ route }) => {
       },
     });
   };
+
+  // Listen for keyboard events
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidHideListener?.remove();
+      keyboardDidShowListener?.remove();
+    };
+  }, []);
 
   // Request permissions and get user data on component mount
   useEffect(() => {
@@ -214,39 +232,72 @@ const OnboardingScreen = ({ route }) => {
   };
 
   const handleOnboarding = async () => {
-    if (!userId) {
-      showAlert('Authentication Error', 'User ID not found. Please login again.', 'error', 'single', () => {
-        navigation.navigate('LogIn');
-      });
-      return;
-    }
-
-    if (!fullName.trim() || !email.trim() || !phone.trim() || !location.trim()) {
-      showAlert('Incomplete', 'Please fill in all required fields', 'warning');
-      return;
-    }
-
-    if (!verificationStatus.email || !verificationStatus.phone || !verificationStatus.location) {
-      showAlert('Verification Required', 'Please verify your email, phone, and location', 'warning');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${BASE_URL}/users/onboard`, {
-        userId: parseInt(userId),
-        email,
-        phone,
-        profile_image: profileImage,
-        bio,
-        location,
-        latitude,
-        longitude,
-      });
+      const formData = new FormData();
+      
+      // Add text fields
+      formData.append('fullname', fullname.trim());
+      formData.append('email', email.trim());
+      formData.append('phone', phone.trim());
+      formData.append('bio', bio.trim() || '');
+      formData.append('location', location.trim());
+      formData.append('latitude', latitude?.toString() || '');
+      formData.append('longitude', longitude?.toString() || '');
+      formData.append('folderType', 'Profile');
 
-      if (response.data.success) {
-        // Update the user's onboard status in AsyncStorage
+      // Add profile image if selected - FIXED FORMAT
+      if (profileImage) {
+        // Get file extension
+        const uriParts = profileImage.split('.');
+        const fileType = uriParts[uriParts.length - 1].toLowerCase();
+        
+        // Create proper file object for React Native
+        const imageFile = {
+          uri: Platform.OS === 'ios' ? profileImage.replace('file://', '') : profileImage,
+          type: `image/${fileType === 'jpg' ? 'jpeg' : fileType}`,
+          name: `profile_${userId}_${Date.now()}.${fileType}`,
+        };
+        
+        formData.append('profile_image', imageFile);
+        console.log('Image added to FormData:', imageFile);
+      }
+
+      // Log FormData contents (for debugging)
+      console.log('FormData contents:');
+      console.log('- fullname:', fullname);
+      console.log('- email:', email);
+      console.log('- phone:', phone);
+      console.log('- location:', location);
+      console.log('- latitude:', latitude);
+      console.log('- longitude:', longitude);
+      console.log('- profile_image:', profileImage ? 'Image selected' : 'No image');
+
+      // Create axios config with proper headers
+      const config = {
+        method: 'POST',
+        url: `${BASE_URL}/users/onboard`,
+        data: formData,
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
+        },
+        timeout: 30000, // 30 second timeout
+      };
+
+      console.log('Making request to:', config.url);
+      console.log('Request headers:', config.headers);
+
+      // Make API request
+      const response = await axios(config);
+
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
+
+      if (response.data && response.data.success) {
+        // Store onboarding completion status
         await AsyncStorage.setItem('user_onboarded', 'true');
         
         showAlert(
@@ -259,30 +310,33 @@ const OnboardingScreen = ({ route }) => {
           }
         );
       } else {
-        showAlert('Error', response.data.message || 'Failed to update profile', 'error');
+        showAlert('Error', response.data?.message || 'Failed to update profile', 'error');
       }
+
     } catch (error) {
-      console.error('Onboarding Error:', error);
+      console.error('Onboarding error:', error);
       
       if (error.response) {
-        const errorMessage = error.response.data?.message || 'Failed to update profile';
+        // Server responded with error status
+        console.log('Error response status:', error.response.status);
+        console.log('Error response data:', error.response.data);
+        console.log('Error response headers:', error.response.headers);
         
-        // Handle authentication errors
         if (error.response.status === 401) {
-          showAlert('Authentication Error', 'Session expired. Please login again.', 'error', 'single', () => {
+          showAlert('Authentication Error', 'Your session has expired. Please login again.', 'error', 'single', () => {
             navigation.navigate('LogIn');
           });
         } else {
-          showAlert('Error', errorMessage, 'error');
+          showAlert('Error', error.response.data?.message || `Server error: ${error.response.status}`, 'error');
         }
       } else if (error.request) {
-        showAlert(
-          'Connection Error',
-          'Could not connect to server. Please check your internet connection and try again.',
-          'error'
-        );
+        // Request was made but no response received
+        console.log('No response received:', error.request);
+        showAlert('Network Error', 'Unable to connect to server. Please check your internet connection.', 'error');
       } else {
-        showAlert('Error', 'An unexpected error occurred. Please try again.', 'error');
+        // Something else happened
+        console.log('Request setup error:', error.message);
+        showAlert('Error', 'Failed to send request: ' + error.message, 'error');
       }
     } finally {
       setIsLoading(false);
@@ -291,7 +345,7 @@ const OnboardingScreen = ({ route }) => {
 
   const nextStep = () => {
     if (currentStep === 1) {
-      if (!fullName.trim() || !email.trim() || !phone.trim()) {
+      if (!fullname.trim() || !email.trim() || !phone.trim()) {
         showAlert('Incomplete', 'Please fill in all fields in step 1', 'warning');
         return;
       }
@@ -307,189 +361,197 @@ const OnboardingScreen = ({ route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {/* Header Section */}
-        <View style={styles.header}>
-          <View style={styles.headerBackground} />
-          <Text style={styles.welcomeTitle}>Complete Your Profile</Text>
-          <Text style={styles.welcomeSubtitle}>
-            {currentStep === 1 ? 'Step 1: Basic Information' : 'Step 2: Location & Photo'}
-          </Text>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header Section - Hide when keyboard is visible */}
+          {!isKeyboardVisible && (
+            <View style={styles.header}>
+              <View style={styles.headerBackground} />
+              <Text style={styles.welcomeTitle}>Complete Your Profile</Text>
+              <Text style={styles.welcomeSubtitle}>
+                {currentStep === 1 ? 'Step 1: Basic Information' : 'Step 2: Location & Photo'}
+              </Text>
 
-          {/* Step Indicator */}
-          <View style={styles.stepIndicator}>
-            <View style={[styles.step, currentStep === 1 && styles.activeStep]}>
-              <Text style={[styles.stepText, currentStep === 1 && styles.activeStepText]}>1</Text>
-            </View>
-            <View style={[styles.stepLine, currentStep === 2 && styles.activeStepLine]} />
-            <View style={[styles.step, currentStep === 2 && styles.activeStep]}>
-              <Text style={[styles.stepText, currentStep === 2 && styles.activeStepText]}>2</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.content}>
-          <FormBox style={styles.formBox}>
-            {currentStep === 1 ? (
-              // Step 1: Basic Information
-              <>
-                <View style={styles.inputSection}>
-                  <FormInput
-                    label="Full Name"
-                    placeholder="Enter your full name"
-                    iconName="person-outline"
-                    value={fullname}
-                    onChangeText={setFullName}
-                  />
-
-                  <FormInput
-                    label="Email"
-                    placeholder="Enter your email"
-                    iconName="mail-outline"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
-
-                  <VerificationRow
-                    type="email"
-                    isVerified={verificationStatus.email}
-                    onVerify={handleEmailVerify}
-                  />
-
-                  <FormInput
-                    label="Phone Number"
-                    placeholder="Enter your phone number"
-                    iconName="call-outline"
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                  />
-
-                  <VerificationRow
-                    type="phone"
-                    isVerified={verificationStatus.phone}
-                    onVerify={handlePhoneVerify}
-                  />
-
-                  <FormInput
-                    label="Bio (Optional)"
-                    placeholder="Tell us about yourself"
-                    iconName="chatbubble-outline"
-                    value={bio}
-                    onChangeText={setBio}
-                    multiline
-                    numberOfLines={3}
-                  />
+              {/* Step Indicator */}
+              <View style={styles.stepIndicator}>
+                <View style={[styles.step, currentStep === 1 && styles.activeStep]}>
+                  <Text style={[styles.stepText, currentStep === 1 && styles.activeStepText]}>1</Text>
                 </View>
+                <View style={[styles.stepLine, currentStep === 2 && styles.activeStepLine]} />
+                <View style={[styles.step, currentStep === 2 && styles.activeStep]}>
+                  <Text style={[styles.stepText, currentStep === 2 && styles.activeStepText]}>2</Text>
+                </View>
+              </View>
+            </View>
+          )}
 
-                <AnimatedButton 
-                  title="Next Step →" 
-                  onPress={nextStep}
-                  style={styles.nextButton}
-                />
-              </>
-            ) : (
-              // Step 2: Location & Photo
-              <>
-                {/* Profile Photo Section */}
-                <View style={styles.photoSection}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Profile Photo</Text>
-                    <View style={styles.hrLine} />
+          <View style={[styles.content, isKeyboardVisible && styles.contentWithKeyboard]}>
+            <FormBox style={styles.formBox}>
+              {currentStep === 1 ? (
+                // Step 1: Basic Information
+                <>
+                  <View style={styles.inputSection}>
+                    <FormInput
+                      label="Full Name"
+                      placeholder="Enter your full name"
+                      iconName="person-outline"
+                      value={fullname}
+                      onChangeText={setfullname}
+                    />
+
+                    <FormInput
+                      label="Email"
+                      placeholder="Enter your email"
+                      iconName="mail-outline"
+                      value={email}
+                      onChangeText={setEmail}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                    />
+
+                    <VerificationRow
+                      type="email"
+                      isVerified={verificationStatus.email}
+                      onVerify={handleEmailVerify}
+                    />
+
+                    <FormInput
+                      label="Phone Number"
+                      placeholder="Enter your phone number"
+                      iconName="call-outline"
+                      value={phone}
+                      onChangeText={setPhone}
+                      keyboardType="phone-pad"
+                    />
+
+                    <VerificationRow
+                      type="phone"
+                      isVerified={verificationStatus.phone}
+                      onVerify={handlePhoneVerify}
+                    />
+
+                    <FormInput
+                      label="Bio (Optional)"
+                      placeholder="Tell us about yourself"
+                      iconName="chatbubble-outline"
+                      value={bio}
+                      onChangeText={setBio}
+                      multiline
+                      numberOfLines={3}
+                    />
                   </View>
-                  
-                  <View style={styles.photoContainer}>
-                    <TouchableOpacity style={styles.photoWrapper} onPress={pickImage}>
-                      {profileImage ? (
-                        <View style={styles.imageContainer}>
-                          <Image source={{ uri: profileImage }} style={styles.profileImage} />
-                          <View style={styles.editBadge}>
-                            <Text style={styles.editIcon}>✏️</Text>
+
+                  <AnimatedButton 
+                    title="Next Step →" 
+                    onPress={nextStep}
+                    style={styles.nextButton}
+                  />
+                </>
+              ) : (
+                // Step 2: Location & Photo
+                <>
+                  {/* Profile Photo Section */}
+                  <View style={styles.photoSection}>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Profile Photo</Text>
+                      <View style={styles.hrLine} />
+                    </View>
+                    
+                    <View style={styles.photoContainer}>
+                      <TouchableOpacity style={styles.photoWrapper} onPress={pickImage}>
+                        {profileImage ? (
+                          <View style={styles.imageContainer}>
+                            <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                            <View style={styles.editBadge}>
+                              <Text style={styles.editIcon}>✏️</Text>
+                            </View>
                           </View>
-                        </View>
-                      ) : (
-                        <View style={styles.photoPlaceholder}>
-                          <View style={styles.photoIcon}>
-                            <Text style={styles.photoIconText}>📷</Text>
+                        ) : (
+                          <View style={styles.photoPlaceholder}>
+                            <View style={styles.photoIcon}>
+                              <Text style={styles.photoIconText}>📷</Text>
+                            </View>
+                            <Text style={styles.photoPlaceholderText}>Add Photo</Text>
+                            <Text style={styles.photoPlaceholderSubtext}>Tap to select from gallery</Text>
                           </View>
-                          <Text style={styles.photoPlaceholderText}>Add Photo</Text>
-                          <Text style={styles.photoPlaceholderSubtext}>Tap to select from gallery</Text>
-                        </View>
-                      )}
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Location Section */}
+                  <View style={styles.locationSection}>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>Location</Text>
+                      <View style={styles.hrLine} />
+                    </View>
+                    
+                    <FormInput
+                      label=""
+                      placeholder="Enter your location"
+                      iconName="location-outline"
+                      value={location}
+                      onChangeText={setLocation}
+                      containerStyle={{marginTop: -30}}
+                    />
+
+                    <TouchableOpacity 
+                      style={[styles.gpsButton, isLoading && styles.gpsButtonLoading]} 
+                      onPress={getCurrentLocation}
+                      disabled={isLoading}
+                    >
+                      <View style={styles.gpsButtonContent}>
+                        <Text style={styles.gpsIcon}>📍</Text>
+                        <Text style={styles.gpsButtonText}>
+                          {isLoading ? 'Getting Location...' : 'Use GPS Location'}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
+                    
+                    {verificationStatus.location && (
+                      <View style={styles.locationVerified}>
+                        <Text style={styles.verifiedIcon}>✅</Text>
+                        <Text style={styles.verifiedText}>Location verified</Text>
+                      </View>
+                    )}
                   </View>
-                </View>
 
-                {/* Location Section */}
-                <View style={styles.locationSection}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Location</Text>
-                    <View style={styles.hrLine} />
+                  <View style={styles.buttonContainer}>
+                    <AnimatedButton 
+                      title="← Previous" 
+                      onPress={prevStep}
+                      style={[styles.actionButton, styles.secondaryButton, { width: '100%', marginRight: 60 }]}
+                      secondary
+                    />
+                    <AnimatedButton 
+                      title={isLoading ? "Saving..." : "Complete Profile"} 
+                      onPress={handleOnboarding}
+                      style={[styles.actionButton, styles.primaryButton, { width: '115%',marginLeft: 10 }]}
+                      loading={isLoading}
+                    />
                   </View>
-                  
-                  <FormInput
-                    label=""
-                    placeholder="Enter your location"
-                    iconName="location-outline"
-                    value={location}
-                    onChangeText={setLocation}
-                    containerStyle={{marginTop: -30}}
-                  />
+                </>
+              )}
+            </FormBox>
+          </View>
+        </ScrollView>
 
-                  <TouchableOpacity 
-                    style={[styles.gpsButton, isLoading && styles.gpsButtonLoading]} 
-                    onPress={getCurrentLocation}
-                    disabled={isLoading}
-                  >
-                    <View style={styles.gpsButtonContent}>
-                      <Text style={styles.gpsIcon}>📍</Text>
-                      <Text style={styles.gpsButtonText}>
-                        {isLoading ? 'Getting Location...' : 'Use GPS Location'}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                  
-                  {verificationStatus.location && (
-                    <View style={styles.locationVerified}>
-                      <Text style={styles.verifiedIcon}>✅</Text>
-                      <Text style={styles.verifiedText}>Location verified</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.buttonContainer}>
-                  <AnimatedButton 
-                    title="← Previous" 
-                    onPress={prevStep}
-                    style={[styles.actionButton, styles.secondaryButton, { width: '100%', marginRight: 60 }]}
-                    secondary
-                  />
-                  <AnimatedButton 
-                    title={isLoading ? "Saving..." : "Complete Profile"} 
-                    onPress={handleOnboarding}
-                    style={[styles.actionButton, styles.primaryButton, { width: '115%',marginLeft: 10 }]}
-                    loading={isLoading}
-                  />
-                </View>
-              </>
-            )}
-          </FormBox>
-        </View>
-      </ScrollView>
-
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        buttonType={alertConfig.buttonType}
-        onClose={alertConfig.onClose}
-      />
+        <CustomAlert
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          buttonType={alertConfig.buttonType}
+          onClose={alertConfig.onClose}
+        />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -498,6 +560,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primarybg,
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
@@ -579,6 +644,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingBottom: 40,
+  },
+  contentWithKeyboard: {
+    paddingTop: 20,
   },
   formBox: {
     shadowColor: Colors.neutral1000,
