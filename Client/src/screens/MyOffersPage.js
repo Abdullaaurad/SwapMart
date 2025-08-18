@@ -1,5 +1,5 @@
 // MyOffersPage.js - Offers made to other users
-import React,{useEffect} from 'react';
+import React,{useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -19,24 +19,20 @@ import { BASE_URL } from '../API/key';
 
 const MyOffersPage = () => {
   const navigation = useNavigation();
-
+  const [myOffers, setMyOffers] = useState([]);
   useEffect(() => {
     const fetchOffers = async () => {
-      try{
-        const response = await axios.get(`${BASE_URL}/products/my-offers`);
-        if(response.data.success){
-          console.log('My Offers:', response.data.products);
-          myOffers = response.data.products;
+      try {
+        const response = await axios.get(`${BASE_URL}/offers/my-offers`);
+        if (response.data.success) {
+          setMyOffers(response.data.offers); // <-- use setMyOffers
         }
+      } catch (error) {
+        console.error('Error fetching offers:', error);
       }
-      catch (error) {
-        console.error('Error fetching product history:', error);
-      }
-    }
+    };
     fetchOffers();
-  }, [] );
-
-  const myOffers = [];
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {

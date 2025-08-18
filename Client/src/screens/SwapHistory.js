@@ -28,7 +28,7 @@ const ProductHistoryPage = () => {
       try{
         const response = await axios.get(`${BASE_URL}/products/listing-history`);
         if(response.data.success){
-          console.log('Fetched product history:', response.data.products);
+          console.log('Fetched product history:', response.data.products[0]?.myItem?.image?.[0]?.url);
           setProductHistory(response.data.products)
         }
       }
@@ -40,11 +40,49 @@ const ProductHistoryPage = () => {
   }, [] );
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('en-US', {
+    // Convert string to Date object
+    const dateObj = new Date(date);
+    
+    // Check if conversion was successful
+    if (isNaN(dateObj.getTime())) {
+      return 'Invalid Date';
+    }
+    
+    return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  // Image placeholder component
+  const ImagePlaceholder = ({ style, text = "No Image" }) => (
+    <View style={[style, styles.imagePlaceholder]}>
+      <Ionicons name="image-outline" size={24} color={Colors.textSecondary} />
+      <Text style={styles.placeholderText}>{text}</Text>
+    </View>
+  );
+
+  // Safe image component with fallback
+  const SafeImage = ({ source, style, alt }) => {
+    const [imageError, setImageError] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    if (!source || imageError) {
+      return <ImagePlaceholder style={style} text={alt || "No Image"} />;
+    }
+
+    return (
+      <Image 
+        source={{ uri: source }}
+        style={style}
+        onError={() => {
+          setImageError(true);
+          setIsLoading(false);
+        }}
+        onLoad={() => setIsLoading(false)}
+      />
+    );
   };
 
   const renderProductItem = ({ item }) => (
@@ -52,32 +90,31 @@ const ProductHistoryPage = () => {
       <View style={styles.swapHeader}>
         <View style={styles.partnerInfo}>
           {item.partnerAvatar ? (
-            <Image source={item.partnerAvatar} style={styles.partnerAvatar} />
+            <Image source={{ uri: item.partnerAvatar }} style={styles.partnerAvatar} />
           ) : (
             <View style={styles.partnerAvatarPlaceholder}>
-              <Text style={styles.partnerAvatarText}>{item.swapPartner.charAt(0)}</Text>
+              <Text style={styles.partnerAvatarText}>{item.swapPartner?.charAt(0) || '?'}</Text>
             </View>
           )}
           <View style={styles.partnerDetails}>
-            <Text style={styles.partnerName}>{item.swapPartner}</Text>
-            <Text style={styles.swapId}>{item.swapId}</Text>
+            <Text style={styles.partnerName}>{item.swapPartner || 'Unknown Partner'}</Text>
           </View>
         </View>
         <View style={styles.swapMeta}>
           <Text style={styles.swapDate}>{formatDate(item.completedDate)}</Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={14} color={Colors.warning} />
-            <Text style={styles.ratingText}>{item.rating}</Text>
-          </View>
         </View>
       </View>
 
       <View style={styles.swapDetails}>
         <View style={styles.itemContainer}>
-          <Image source={item.myItem.image} style={styles.itemImage} />
+          <SafeImage 
+            source={item?.myItem?.image?.[0]?.url} 
+            style={styles.itemImage} 
+            alt="My Item"
+          />
           <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.myItem.name}</Text>
-            <Text style={styles.itemCondition}>Condition: {item.myItem.condition}</Text>
+            <Text style={styles.itemName}>{item?.myItem?.name || 'Unknown Item'}</Text>
+            <Text style={styles.itemCondition}>Condition: {item?.myItem?.condition || 'N/A'}</Text>
             <Text style={styles.itemLabel}>You gave</Text>
           </View>
         </View>
@@ -87,10 +124,14 @@ const ProductHistoryPage = () => {
         </View>
 
         <View style={styles.itemContainer}>
-          <Image source={item.receivedItem.image} style={styles.itemImage} />
+          <SafeImage 
+            source={item?.receivedItem?.image[0]} 
+            style={styles.itemImage} 
+            alt="Received Item"
+          />
           <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.receivedItem.name}</Text>
-            <Text style={styles.itemCondition}>Condition: {item.receivedItem.condition}</Text>
+            <Text style={styles.itemName}>{item?.receivedItem?.name || 'Unknown Item'}</Text>
+            <Text style={styles.itemCondition}>Condition: {item?.receivedItem?.condition || 'N/A'}</Text>
             <Text style={styles.itemLabel}>You received</Text>
           </View>
         </View>
@@ -137,7 +178,7 @@ const ProductHistoryPage = () => {
       <FlatList
         data={productHistory}
         renderItem={renderProductItem}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
         style={styles.swapList}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
@@ -306,6 +347,21 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.text,
     marginLeft: 6,
+  },
+  // New styles for placeholder
+  imagePlaceholder: {
+    backgroundColor: Colors.neutral100 || '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border || '#e0e0e0',
+    borderStyle: 'dashed',
+  },
+  placeholderText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
 

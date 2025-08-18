@@ -66,35 +66,33 @@ class Offer {
   }
 
   static async create(offerData) {
-    const { product_id, buyer_id, seller_id, offer_amount, message } = offerData;
-    
-    // Check if product exists and is available
-    const productResult = await db.query(
-      'SELECT * FROM products WHERE id = $1 AND is_available = true',
-      [product_id]
-    );
-    
-    if (productResult.rows.length === 0) {
-      throw new Error('Product not found or not available');
-    }
-    
-    // Check if user has already made an offer for this product
-    const existingOffer = await db.query(
-      'SELECT * FROM offers WHERE product_id = $1 AND buyer_id = $2 AND status = $3',
-      [product_id, buyer_id, 'pending']
-    );
-    
-    if (existingOffer.rows.length > 0) {
-      throw new Error('You have already made an offer for this product');
-    }
-    
+    const {
+      product_id,
+      buyer_id,
+      seller_id,
+      offered_item_title,
+      offered_item_description,
+      offered_item_images,
+      message,
+      status = 'pending'
+    } = offerData;
+
     const result = await db.query(
-      `INSERT INTO offers (product_id, buyer_id, seller_id, offer_amount, message) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING *`,
-      [product_id, buyer_id, seller_id, offer_amount, message]
+      `INSERT INTO offers (
+        product_id, buyer_id, seller_id, offered_item_title, offered_item_description, offered_item_images, message, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *`,
+      [
+        product_id,
+        buyer_id,
+        seller_id,
+        offered_item_title,
+        offered_item_description,
+        JSON.stringify(offered_item_images || []),
+        message,
+        status
+      ]
     );
-    
     return result.rows[0];
   }
 

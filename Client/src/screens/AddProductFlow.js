@@ -20,6 +20,7 @@ const AddProductFlow = ({ navigation }) => {
     title: '',
     description: '',
     category: '',
+    categoryName: '',
     condition: '',
     originalPrice: '',
     tags: [],
@@ -109,13 +110,23 @@ const AddProductFlow = ({ navigation }) => {
     for (const image of images) {
       try {
         const formData = new FormData();
+        formData.append('folderType', 'Product'); // Specify folder type
         formData.append('image', {
           uri: image.uri,
           type: 'image/jpeg', // or detect from image
           name: `image_${Date.now()}.jpg`,
         });
+        
+        // Log the FormData contents
+        // console.log('Sending FormData:');
+        // for (let [key, value] of formData.entries()) {
+        //   console.log(key, value);
+        // }
+        
+        // Log the folderType value specifically
+        // console.log('folderType value:', formData.get('folderType'));
 
-        const response = await axios.post(`${BASE_URL}/upload/image`, formData, {
+        const response = await axios.post(`${BASE_URL}/products/upload/image`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -124,7 +135,7 @@ const AddProductFlow = ({ navigation }) => {
         if (response.data.success) {
           uploadedImages.push({
             id: image.id,
-            url: response.data.imageUrl, // Assuming backend returns imageUrl
+            url: response.data.filename, // Store just the filename (relative path)
             isMain: uploadedImages.length === 0, // First image is main
           });
         }
@@ -185,7 +196,7 @@ const AddProductFlow = ({ navigation }) => {
       };
 
       // Send data to backend
-      const response = await axios.post(`${BASE_URL}/swaps/create`, swapData);
+      const response = await axios.post(`${BASE_URL}/products/create`, swapData);
 
       if (response.data.success) {
         const { swap } = response.data;

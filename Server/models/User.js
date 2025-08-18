@@ -82,22 +82,23 @@ class User {
   }
 
   static async updateProfile(userId, profileData) {
-    const { email, phone, profile_image, bio, location, latitude, longitude } = profileData;
+    const { fullname, email, phone, profile_image, bio, location, latitude, longitude } = profileData;
     
     const result = await db.query(
-      `UPDATE users 
-       SET email = COALESCE($1, email),
-           phone = COALESCE($2, phone),
-           profile_image = COALESCE($3, profile_image),
-           bio = COALESCE($4, bio),
-           location = COALESCE($5, location),
-           latitude = COALESCE($6, latitude),
-           longitude = COALESCE($7, longitude),
+      `UPDATE users
+       SET fullname = COALESCE($1, fullname),
+           email = COALESCE($2, email),
+           phone = COALESCE($3, phone),
+           profile_image = COALESCE($4, profile_image),
+           bio = COALESCE($5, bio),
+           location = COALESCE($6, location),
+           latitude = COALESCE($7, latitude),
+           longitude = COALESCE($8, longitude),
            onboard = true,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8 
+       WHERE id = $9
        RETURNING *`,
-      [email, phone, profile_image, bio, location, latitude, longitude, userId]
+      [fullname, email, phone, profile_image, bio, location, latitude, longitude, userId]
     );
     
     return result.rows[0];

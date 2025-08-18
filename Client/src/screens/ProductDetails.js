@@ -57,13 +57,14 @@ const MyProductDetailsPage = () => {
   };
 
   useEffect(() => {
-    console.log("Product Id: ", productId)
+    console.log("Product Id: ", route.params.product)
     fetchProductDetails();
   }, [productId]);
 
   const fetchProductDetails = async () => {
     try {
       setLoading(true);
+      console.log(productId)
       const response = await axios.get(`${BASE_URL}/products/product/${productId}`);
       console.log(response.data.products)
       if (response.data.success) {

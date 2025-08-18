@@ -4,6 +4,8 @@ const router = express.Router();
 const offerController = require('../controllers/offerController');
 const { authenticateToken } = require('../middleware/auth');
 
-router.post('/my-offers', authenticateToken, offerController.getOffer);
+router.get('/my-offers', authenticateToken, offerController.getOffer);
+router.post('/create', authenticateToken, offerController.createOffer);4
+router.put('/:id',authenticateToken, offerController.)
 
 module.exports = router;

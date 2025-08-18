@@ -4,6 +4,7 @@ const { Wanted } = require('../models');
 const { Offer } = require('../models');
 const { Swap } = require('../models')
 const { User } = require('../models');
+const { handleSingleUpload } = require('../Helper/fileUpload');
 
 // Existing functions (keeping as-is)
 exports.getAllProducts = async (req, res) => {
@@ -45,9 +46,20 @@ exports.getProductsById = async (req, res) => {
         const wantedItemsResult = await Wanted.getByProductId(productId);
         console.log("wanted Items :", wantedItemsResult)
         products.wanted_items = wantedItemsResult
+
+        const productWithImageUrls = {
+          ...products,
+          images: Array.isArray(products.images)
+            ? products.images.map(img => ({
+                ...img,
+                url: `${req.protocol}://${req.get('host')}/Uploads/Product/${img.url}`
+              }))
+            : []
+        };
+
         return res.status(200).json({
           success: true,
-          products: products
+          products: productWithImageUrls
         });
         
       }
@@ -65,61 +77,136 @@ exports.getProductsById = async (req, res) => {
 exports.getMyProductsById = async (req, res) => {
   const productId = req.params.id;
   const userId = req.user.id;
+  
   if (!productId) {
     return res.status(400).json({
       success: false,
       message: 'Product ID is required'
     });
   }
-  else{
-    try {
-      const products = await Product.findById(productId);
-      if (!products) {
-        return res.status(404).json({
-          success: false,
-          message: 'product not found'
-        });
-      }
-      else{
-        if( products.user_id !== userId) {
-          return res.status(403).json({
-            success: false,
-            message: 'You do not have permission to view this product'
-          });
-        }
-        else{
-          const wantedItemsResult = await Wanted.getByProductId(productId);
-          console.log("wanted Items :", wantedItemsResult)
-          products.wanted_items = wantedItemsResult
 
-          const offers = await Offer.findByProduct(productId)
-          products.offer = offers
-
-          return res.status(200).json({
-            success: true,
-            products: products
-          });
-        }
-      }
-    }
-    catch (err) {
-      console.error('Error fetching products:', err);
-      return res.status(500).json({
+  try {
+    const products = await Product.findById(productId);
+    
+    if (!products) {
+      return res.status(404).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Product not found'
       });
     }
+
+    if (products.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view this product'
+      });
+    }
+
+    // Process product images
+    let productWithImageUrls = {
+      ...products._doc || products, // Use _doc for Mongoose documents
+      images: Array.isArray(products.images)
+        ? products.images.map(img => ({
+            ...img,
+            url: `${req.protocol}://${req.get('host')}/Uploads/Product/${img.url || img}`
+          }))
+        : []
+    };
+
+    // Get wanted items
+    const wantedItemsResult = await Wanted.getByProductId(productId);
+    console.log("wanted Items:", wantedItemsResult);
+    productWithImageUrls.wanted_items = wantedItemsResult;
+
+    // Get offers and process their images
+    const offers = await Offer.findByProduct(productId);
+    
+    // Process offers to include full image URLs
+    const processedOffers = Array.isArray(offers) 
+      ? offers.map(offer => ({
+          ...offer._doc || offer,
+          offered_item_images: Array.isArray(offer.offered_item_images)
+            ? offer.offered_item_images.map(img => {
+                // If img is just a string (filename)
+                if (typeof img === 'string') {
+                  return `${req.protocol}://${req.get('host')}/Uploads/Product/${img}`;
+                }
+                // If img is an object with url property
+                return {
+                  ...img,
+                  url: `${req.protocol}://${req.get('host')}/Uploads/Product/${img.url || img}`
+                };
+              })
+            : []
+        }))
+      : [];
+
+    productWithImageUrls.offers = processedOffers;
+
+    return res.status(200).json({
+      success: true,
+      product: productWithImageUrls // Changed from 'products' to 'product' since it's a single item
+    });
+
+  } catch (err) {
+    console.error('Error fetching product:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
 }
+
+// Image upload function for products
+exports.uploadProductImage = async (req, res) => {
+  try {
+    console.log('uploadProductImage - req.file:', req.file);
+    console.log('uploadProductImage - req.body:', req.body);
+    console.log('uploadProductImage - req.body.folderType:', req.body.folderType);
+    console.log('uploadProductImage - typeof req.body.folderType:', typeof req.body.folderType);
+    // The file is already uploaded by the middleware
+    if (req.file) {
+      return res.status(200).json({
+        success: true,
+        message: 'Image uploaded successfully',
+        filename: req.file.filename, // Return just the filename
+        path: req.file.path,
+        size: req.file.size
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+  } catch (error) {
+    console.error('Product image upload error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
 
 exports.getMyProductsListings = async (req, res) => {
   const userId = req.user.id;
   try {
     const products = await Product.findByUserlistings(userId);
     console.log("products:",  products);
+
+    const productsWithImageUrls = products.map(product => ({
+      ...product,
+      images: Array.isArray(product.images)
+        ? product.images.map(img => ({
+            ...img,
+            url: `${req.protocol}://${req.get('host')}/Uploads/Product/${img.url}`
+          }))
+        : []
+    }));
+
     return res.status(200).json({
       success: true,
-      products: products
+      products: productsWithImageUrls
     });
   } catch (err) {
     console.error('Error fetching user productss:', err);
@@ -189,11 +276,21 @@ exports.getListingHistory = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
   const userId = req.user.id; // Get userId from authenticated token
+  console.log('createProduct - req.body:', req.body);
+  console.log('createProduct - typeof req.body:', typeof req.body);
   const {
-    title, description, category, condition, originalPrice, tags, images,
+    title, description, category, condition, originalPrice, tags,
     wantedItems, wantedCategory, wantedCondition, wantedPriceRange,
     additionalNotes, swapPreference, negotiable, location
   } = req.body;
+
+  const wantedItemsFormatted = Array.isArray(wantedItems)
+  ? wantedItems.map((item, index) => ({
+      name: item.name || item, // handle both object and string
+      description: item.description || null,
+      priority: item.priority || index + 1
+    }))
+  : [];
 
   // Validation
   if (!title || !description || !category || !condition) {
@@ -211,12 +308,47 @@ exports.createProduct = async (req, res) => {
   }
 
   try {
-    // Transform wanted items to match database structure
-    const wantedItemsFormatted = wantedItems.map((item, index) => ({
-      name: item,
-      description: null,
-      priority: index + 1
-    }));
+    // console.log('createProduct - req.files:', req.files);
+    // console.log('createProduct - req.body.images:', req.body.images);
+    // console.log('createProduct - typeof req.body.images:', typeof req.body.images);
+    // Handle image uploads if any
+    let uploadedImages = [];
+    if (req.files && req.files.length > 0) {
+      // Transform uploaded files to match database structure
+      uploadedImages = req.files.map(file => ({
+        url: file.filename, // Store only filename, not full URL
+        alt: file.originalname
+      }));
+    } else if (req.body.images) {
+          // If images were already uploaded separately, use those
+          try {
+            // Check if req.body.images is already an array of objects
+            if (Array.isArray(req.body.images)) {
+              uploadedImages = req.body.images.map(img => ({
+                url: typeof img.url === 'string' ? img.url.split('/').pop() : img.url,
+                alt: img.alt || ''
+              }));
+            } else {
+              // Try to parse as JSON string
+              const parsedImages = JSON.parse(req.body.images);
+              uploadedImages = parsedImages.map(img => ({
+                url: typeof img.url === 'string' ? img.url.split('/').pop() : img.url,
+                alt: img.alt || ''
+              }));
+            }
+          } catch (e) {
+            // If images is not JSON and not an array, treat it as a single image filename
+            if (typeof req.body.images === 'string') {
+              uploadedImages = [{
+                url: req.body.images.split('/').pop(),
+                alt: ''
+              }];
+            } else {
+              // If it's neither a string nor valid JSON, use it as is
+              uploadedImages = Array.isArray(req.body.images) ? req.body.images : [];
+            }
+          }
+        }
 
     const productsData = {
       user_id: userId,
@@ -226,7 +358,7 @@ exports.createProduct = async (req, res) => {
       condition,
       original_price: originalPrice || null,
       tags: tags || [],
-      images: images || [],
+      images: uploadedImages,
       wanted_category_id: wantedCategory || null,
       wanted_condition: wantedCondition || null,
       wanted_price_range: wantedPriceRange || null,
@@ -234,14 +366,36 @@ exports.createProduct = async (req, res) => {
       swap_preference: swapPreference || 'local',
       negotiable: negotiable !== undefined ? negotiable : true,
       location: location || null,
-      wanted_items: wantedItemsFormatted
     };
 
+    // console.log('createProduct - productsData:', productsData);
+    // console.log('createProduct - productsData.images:', productsData.images);
+    // console.log('createProduct - typeof productsData.images:', typeof productsData.images);
     const newProduct = await Product.create(productsData);
+
+    if (wantedItemsFormatted && Array.isArray(wantedItemsFormatted)) {
+      for (const item of wantedItemsFormatted) {
+        await Wanted.create({
+          product_id: newProduct.id,
+          item_name: item.name,
+          description: item.description,
+          priority: item.priority
+        });
+      }
+    }
+
+    // Construct full image URLs for response
+    const productWithImageUrls = {
+      ...newProduct,
+      images: newProduct.images.map(img => ({
+        ...img,
+        url: `${req.protocol}://${req.get('host')}/Uploads/Product/${img.url}`
+      }))
+    };
 
     return res.status(201).json({
       success: true,
-      product: newProduct
+      product: productWithImageUrls
     });
   } catch (err) {
     console.error('Error creating products:', err);
@@ -378,25 +532,35 @@ exports.getProductsByCategory = async (req, res) => {
 }
 
 exports.getHomeProducts = async (req, res) => {
+  const userId = req.user.id;
   const limit = parseInt(req.query.limit) || 10;
   const offset = parseInt(req.query.offset) || 0;
-  console.log("Limit =", limit, "Offset =",  offset)
-  const { search, categoryId} = req.query;
+  const { search, categoryId } = req.query;
 
   try {
     const filters = { status: 'active' };
-    
-    // Apply filters
     if (categoryId && categoryId !== 'null') filters.category_id = parseInt(categoryId);
     if (search && search.trim()) filters.search = search.trim();
 
-    const products = await Product.findHomeProducts ? 
-      await Product.findHomeProducts(limit, offset, filters) :
-      await Product.findAllWithFilters(limit, offset, filters);
-    
+    const products = await Product.findHomeProducts(userId, limit, offset, filters);
+
+    // Build full image URLs for each product
+    const productsWithImageUrls = products.map(product => ({
+      ...product,
+      images: Array.isArray(product.images)
+        ? product.images.map(img => ({
+            ...img,
+            url: `${req.protocol}://${req.get('host')}/Uploads/Product/${img.url}`
+          }))
+        : []
+    }));
+
+    const totalCount = await Product.getProductCount ? await Product.getProductCount(filters) : 0;
+
     return res.status(200).json({
       success: true,
-      products: products
+      products: productsWithImageUrls,
+      totalCount: totalCount
     });
   } catch (err) {
     console.error('Error fetching home products:', err);

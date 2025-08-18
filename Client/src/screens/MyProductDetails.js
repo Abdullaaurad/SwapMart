@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+  import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -65,9 +65,9 @@ const MyProductDetailsPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${BASE_URL}/products/my-product/${productId}`);
-      console.log(response.data.products)
+      console.log(response.data.product)
       if (response.data.success) {
-        setProduct(response.data.products);
+        setProduct(response.data.product);
       } else {
         showAlert('Error', 'Failed to fetch product details', 'error');
       }
@@ -78,6 +78,20 @@ const MyProductDetailsPage = () => {
       setLoading(false);
     }
   };
+
+  const deletproduct = async () => {
+    try{
+      const response = await axios.delete(`${BASE_URL}/products/${productId}`);
+      if (response.data.success){
+        showAlert('Success', 'Product deleted Successfully')
+      }else{
+        showAlert('Failure', 'Failed to delete product', 'error')
+      }
+    }catch(error){
+      console.error('Error fetching product details:', error);
+      showAlert('Error', error.message, 'error');
+    }
+  }
 
   const getConditionColor = (condition) => {
     switch (condition?.toLowerCase()) {
@@ -568,6 +582,12 @@ const MyProductDetailsPage = () => {
 
           {/* Wanted Items */}
           {renderWantedItems()}
+
+          <View style={styles.deleteContainer}>
+            <TouchableOpacity style={styles.deleteButton} onPress={deleteProduct}>
+              <Text style={styles.deleteText}>DELETE</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 
@@ -973,6 +993,34 @@ const styles = StyleSheet.create({
   offerDate: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  deleteContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    backgroundColor: Colors.neutral0,
+  },
+  deleteButton: {
+    backgroundColor: Colors.danger, // Red color
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.danger,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  deleteText: {
+    color: Colors.neutral0,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });
 

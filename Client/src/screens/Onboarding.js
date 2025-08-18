@@ -232,40 +232,72 @@ const OnboardingScreen = ({ route }) => {
   };
 
   const handleOnboarding = async () => {
-    if (!userId) {
-      showAlert('Authentication Error', 'User ID not found. Please login again.', 'error', 'single', () => {
-        navigation.navigate('LogIn');
-      });
-      return;
-    }
-
-    if (!fullname.trim() || !email.trim() || !phone.trim() || !location.trim()) {
-      showAlert('Incomplete', 'Please fill in all required fields', 'warning');
-      return;
-    }
-
-    if (!verificationStatus.email || !verificationStatus.phone || !verificationStatus.location) {
-      showAlert('Verification Required', 'Please verify your email, phone, and location', 'warning');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${BASE_URL}/users/onboard`, {
-        userId: parseInt(userId),
-        fullname,
-        email,
-        phone,
-        profile_image: profileImage,
-        bio,
-        location,
-        latitude,
-        longitude,
-      });
+      const formData = new FormData();
+      
+      // Add text fields
+      formData.append('fullname', fullname.trim());
+      formData.append('email', email.trim());
+      formData.append('phone', phone.trim());
+      formData.append('bio', bio.trim() || '');
+      formData.append('location', location.trim());
+      formData.append('latitude', latitude?.toString() || '');
+      formData.append('longitude', longitude?.toString() || '');
+      formData.append('folderType', 'Profile');
 
-      if (response.data.success) {
-        // Update the user's onboard status in AsyncStorage
+      // Add profile image if selected - FIXED FORMAT
+      if (profileImage) {
+        // Get file extension
+        const uriParts = profileImage.split('.');
+        const fileType = uriParts[uriParts.length - 1].toLowerCase();
+        
+        // Create proper file object for React Native
+        const imageFile = {
+          uri: Platform.OS === 'ios' ? profileImage.replace('file://', '') : profileImage,
+          type: `image/${fileType === 'jpg' ? 'jpeg' : fileType}`,
+          name: `profile_${userId}_${Date.now()}.${fileType}`,
+        };
+        
+        formData.append('profile_image', imageFile);
+        console.log('Image added to FormData:', imageFile);
+      }
+
+      // Log FormData contents (for debugging)
+      console.log('FormData contents:');
+      console.log('- fullname:', fullname);
+      console.log('- email:', email);
+      console.log('- phone:', phone);
+      console.log('- location:', location);
+      console.log('- latitude:', latitude);
+      console.log('- longitude:', longitude);
+      console.log('- profile_image:', profileImage ? 'Image selected' : 'No image');
+
+      // Create axios config with proper headers
+      const config = {
+        method: 'POST',
+        url: `${BASE_URL}/users/onboard`,
+        data: formData,
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
+        },
+        timeout: 30000, // 30 second timeout
+      };
+
+      console.log('Making request to:', config.url);
+      console.log('Request headers:', config.headers);
+
+      // Make API request
+      const response = await axios(config);
+
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
+
+      if (response.data && response.data.success) {
+        // Store onboarding completion status
         await AsyncStorage.setItem('user_onboarded', 'true');
         
         showAlert(
@@ -278,30 +310,33 @@ const OnboardingScreen = ({ route }) => {
           }
         );
       } else {
-        showAlert('Error', response.data.message || 'Failed to update profile', 'error');
+        showAlert('Error', response.data?.message || 'Failed to update profile', 'error');
       }
+
     } catch (error) {
-      console.error('Onboarding Error:', error);
+      console.error('Onboarding error:', error);
       
       if (error.response) {
-        const errorMessage = error.response.data?.message || 'Failed to update profile';
+        // Server responded with error status
+        console.log('Error response status:', error.response.status);
+        console.log('Error response data:', error.response.data);
+        console.log('Error response headers:', error.response.headers);
         
-        // Handle authentication errors
         if (error.response.status === 401) {
-          showAlert('Authentication Error', 'Session expired. Please login again.', 'error', 'single', () => {
+          showAlert('Authentication Error', 'Your session has expired. Please login again.', 'error', 'single', () => {
             navigation.navigate('LogIn');
           });
         } else {
-          showAlert('Error', errorMessage, 'error');
+          showAlert('Error', error.response.data?.message || `Server error: ${error.response.status}`, 'error');
         }
       } else if (error.request) {
-        showAlert(
-          'Connection Error',
-          'Could not connect to server. Please check your internet connection and try again.',
-          'error'
-        );
+        // Request was made but no response received
+        console.log('No response received:', error.request);
+        showAlert('Network Error', 'Unable to connect to server. Please check your internet connection.', 'error');
       } else {
-        showAlert('Error', 'An unexpected error occurred. Please try again.', 'error');
+        // Something else happened
+        console.log('Request setup error:', error.message);
+        showAlert('Error', 'Failed to send request: ' + error.message, 'error');
       }
     } finally {
       setIsLoading(false);

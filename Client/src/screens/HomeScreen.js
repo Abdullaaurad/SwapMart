@@ -9,7 +9,9 @@ import {
   StatusBar,
   FlatList,
   Platform,
-  RefreshControl
+  RefreshControl,
+  Dimensions,
+  Animated
 } from 'react-native';
 import Colors from '../constants/colors'
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -22,6 +24,9 @@ import axios from 'axios';
 import { BASE_URL } from '../API/key';
 import LoadingComponent from '../components/Loading';
 import CustomAlert from '../components/CustomAlert';
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 48) / 2; // Account for padding and gap
 
 const SwapMartHomePage = () => {
   const navigation = useNavigation();
@@ -101,10 +106,12 @@ const SwapMartHomePage = () => {
 
       console.log(params);
       const result = await axios.get(`${BASE_URL}/products/home`, { params });
-      console.log(result);
+      console.log(result.data.products[0]);
+      
       
       if (result.data && result.data.success) {
         const newProducts = result.data.products || [];
+        const totalCount = result.data.totalCount || 0;
         
         if (isLoadMore) {
           setFeaturedItems(prev => [...prev, ...newProducts]);
@@ -112,7 +119,8 @@ const SwapMartHomePage = () => {
           setFeaturedItems(newProducts);
         }
         
-        setHasMoreData(newProducts.length === params.limit);
+        // Check if we've loaded all products
+        setHasMoreData(offset + newProducts.length < totalCount);
         setCurrentPage(offset);
       } else {
         console.error('API Error:', result.data?.message || 'Unknown error');
@@ -222,10 +230,135 @@ const SwapMartHomePage = () => {
     </TouchableOpacity>
   );
 
+  // Beautiful Product Card Component
+  const BeautifulProductCard = ({ item, index }) => {
+    const [scaleValue] = useState(new Animated.Value(1));
+
+    const handlePressIn = () => {
+      Animated.spring(scaleValue, {
+        toValue: 0.95,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const handlePressOut = () => {
+      Animated.spring(scaleValue, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const formatPrice = (price) => {
+      return price ? `$${parseFloat(price).toFixed(2)}` : 'Price not set';
+    };
+
+    const getConditionColor = (condition) => {
+      switch (condition?.toLowerCase()) {
+        case 'new': return '#10B981';
+        case 'like new': return '#059669';
+        case 'good': return '#F59E0B';
+        case 'fair': return '#EF4444';
+        default: return '#6B7280';
+      }
+    };
+
+    const firstImageUrl = item.images && item.images.length > 0 ? item.images[0].url : null;
+
+    const itemForCard = {
+      ...item,
+      image: firstImageUrl ? { uri: firstImageUrl } : require('../assets/logo_light.png'), // fallback if no image
+      price: item.original_price,
+      originalPrice: item.original_price,
+      // add other props as needed
+    };
+
+    return (
+      <Animated.View style={[
+        styles.cardContainer,
+        { transform: [{ scale: scaleValue }] }
+      ]}>
+        <TouchableOpacity
+          style={styles.modernCard}
+          onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={1}
+        >
+          {/* Image Container */}
+          <View style={styles.modernImageContainer}>
+            <ItemCard item={itemForCard} />
+            
+            {/* Favorite Button */}
+            <TouchableOpacity style={styles.favoriteButton}>
+              <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            {/* Condition Badge */}
+            {item.condition && (
+              <View style={[
+                styles.conditionBadge,
+                { backgroundColor: getConditionColor(item.condition) }
+              ]}>
+                <Text style={styles.conditionText}>
+                  {item.condition}
+                </Text>
+              </View>
+            )}  
+          </View>
+
+          {/* Content Container */}
+          <View style={styles.modernCardContent}>
+            {/* Title and Category */}
+            <View style={styles.titleSection}>
+              <Text style={styles.modernCardTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.modernCardCategory} numberOfLines={1}>
+                  {item.category_name}
+                </Text>
+              </View>
+            </View>
+
+            {/* Price Section */}
+            <View style={styles.priceSection}>
+              <Text style={styles.modernCardPrice}>
+                {formatPrice(item.original_price)}
+              </Text>
+              {item.discounted_price && item.discounted_price < item.original_price && (
+                <Text style={styles.originalPrice}>
+                  ${parseFloat(item.original_price).toFixed(2)}
+                </Text>
+              )}
+            </View>
+
+            {/* Seller Info */}
+            <View style={styles.sellerSection}>
+              <View style={styles.sellerInfo}>
+                <View style={styles.sellerAvatar}>
+                  <Ionicons name="person" size={14} color={Colors.primary} />
+                </View>
+                <Text style={styles.modernSellerName} numberOfLines={1}>
+                  {item.seller_name || 'Unknown Seller'}
+                </Text>
+              </View>
+              
+              {/* Rating or Status */}
+              <View style={styles.statusContainer}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>Available</Text>
+
+              </View>
+            </View>
+
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
+
   const renderFeaturedItem = ({ item, index }) => (
-    <View style={[styles.featuredItemWrapper, { marginRight: index % 2 === 0 ? 8 : 0 }]}>
-      <ItemCard item={item} onPress={() => navigation.navigate('ProductDetails')} />
-    </View>
+    <BeautifulProductCard item={item} index={index} />
   );
 
   const renderFooter = () => {
@@ -239,7 +372,9 @@ const SwapMartHomePage = () => {
 
   const EmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="search-outline" size={64} color={Colors.neutral400} />
+      <View style={styles.emptyStateIconContainer}>
+        <Ionicons name="search-outline" size={64} color={Colors.neutral400} />
+      </View>
       <Text style={styles.emptyStateTitle}>
         {searchQuery ? 'No items found' : 'No products available'}
       </Text>
@@ -249,6 +384,11 @@ const SwapMartHomePage = () => {
           : 'Check back later for new items'
         }
       </Text>
+      {!searchQuery && (
+        <TouchableOpacity style={styles.emptyStateButton}>
+          <Text style={styles.emptyStateButtonText}>Browse Categories</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -300,7 +440,7 @@ const SwapMartHomePage = () => {
           </View>
           <FlatList
             data={categories}
-            renderItem={({ item }) => <CategoryCard category={item} />}
+            renderItem={({ item }) => <CategoryCard category={item} selectedCategory={selectedCategory} />}
             keyExtractor={(item) => (item.id || 'all').toString()}
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -390,17 +530,14 @@ const SwapMartHomePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Platform.OS === 'ios' ? Colors.neutral0 : Colors.background,
+    backgroundColor: Platform.OS === 'ios' ? '#F8FAFC' : '#F1F5F9',
   },
   scrollView: {
     flex: 1,
   },
   featuredRow: {
     justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  featuredItemWrapper: {
-    flex: 1,
+    marginBottom: 16,
   },
 
   // Section Styles
@@ -413,26 +550,27 @@ const styles = StyleSheet.create({
   featuredSection: {
     paddingHorizontal: 16,
     paddingVertical: 16,
+    backgroundColor: '#F8FAFC',
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
     flex: 1,
   },
   viewAllText: {
     fontSize: 14,
     color: Colors.primary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 
-  // Category Styles
+  // Category Styles (keeping original)
   categoriesList: {
     paddingRight: 16,
   },
@@ -448,15 +586,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    // Shadow for iOS
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    // Shadow for Android
     elevation: 3,
   },
   categoryCardSelected: {
@@ -464,7 +597,6 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     backgroundColor: '#F8FAFC',
     transform: [{ scale: 1.05 }],
-    // Enhanced shadow when selected
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 6,
@@ -492,7 +624,175 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Quick Actions Styles
+  // Modern Card Styles
+  cardContainer: {
+    width: CARD_WIDTH,
+    marginBottom: 8,
+  },
+  modernCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  modernImageContainer: {
+    height: 160,
+    backgroundColor: '#F1F5F9',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backdropFilter: 'blur(10px)',
+  },
+  conditionBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  conditionText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  modernCardContent: {
+    padding: 16,
+  },
+  titleSection: {
+    marginBottom: 12,
+  },
+  modernCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    lineHeight: 22,
+    marginBottom: 6,
+  },
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  modernCardCategory: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '500',
+  },
+  priceSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modernCardPrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#059669',
+    marginRight: 8,
+  },
+  originalPrice: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
+  },
+  sellerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sellerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  sellerAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  modernSellerName: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+    flex: 1,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+    marginRight: 4,
+  },
+  statusText: {
+    fontSize: 11,
+    color: '#10B981',
+    fontWeight: '500',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  chatButtonText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  viewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+  },
+  viewButtonText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginRight: 4,
+  },
+
+  // Quick Actions Styles (keeping original)
   quickActionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -529,23 +829,46 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
 
-  // Empty State
+  // Enhanced Empty State
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  emptyStateIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
   },
   emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginTop: 16,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptyStateSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+    fontSize: 16,
+    color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 25,
+  },
+  emptyStateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Footer loader
