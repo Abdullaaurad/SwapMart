@@ -421,7 +421,7 @@ const MyProductDetailsPage = () => {
               style={styles.contactButton}
               onPress={() => {
                 // Navigate to chat or contact owner
-                navigation.navigate('Chat', { 
+                navigation.navigate('ChatDetails', { 
                   productId: product.id,
                   ownerId: product.user_id 
                 });

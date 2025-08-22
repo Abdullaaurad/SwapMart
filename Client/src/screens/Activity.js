@@ -76,15 +76,6 @@ const ActivityPage = () => {
       count: null,
       screen: 'RecentlyViewed'
     },
-    {
-      id: 6,
-      title: 'Reviews & Ratings',
-      subtitle: 'Your reviews and feedback',
-      icon: 'star',
-      color: Colors.premiumText,
-      count: userStats.reviewCount,
-      screen: 'ReviewsRatings'
-    }
   ];
 
   const quickActions = [

@@ -53,46 +53,47 @@ const MyOffersPage = () => {
   const renderOfferItem = ({ item }) => (
     <TouchableOpacity style={styles.offerCard}>
       <View style={styles.offerHeader}>
-        <Text style={styles.offerTarget}>Offer for: {item.targetItem.name}</Text>
+        <Text style={styles.offerTarget}>Offer for: {item.product_title}</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
           <Text style={styles.statusText}>{item.status}</Text>
         </View>
       </View>
-      
-      <Text style={styles.offerOwner}>Owner: {item.targetItem.owner}</Text>
-      
+      <Text style={styles.offerOwner}>Owner: {item.seller_name}</Text>
       <View style={styles.offerItems}>
         <View style={styles.offerItemContainer}>
-          <Image source={item.targetItem.image} style={styles.offerItemImage} />
-          <Text style={styles.offerItemName}>{item.targetItem.name}</Text>
+          <Image
+            source={
+              item.product_images && item.product_images.length > 0
+                ? { uri: item.product_images[0] }
+                : require('../assets/placeholder.png')
+            }
+            style={styles.offerItemImage}
+          />
+          <Text style={styles.offerItemName}>{item.product_title}</Text>
           <Text style={styles.offerItemLabel}>Wanted</Text>
         </View>
-        
         <View style={styles.offerArrow}>
           <Ionicons name="arrow-forward" size={20} color={Colors.primary} />
         </View>
-        
         <View style={styles.offerItemContainer}>
-          <Image source={item.offeredItem.image} style={styles.offerItemImage} />
-          <Text style={styles.offerItemName}>{item.offeredItem.name}</Text>
+          <Image
+            source={
+              item.offered_item_images && item.offered_item_images.length > 0
+                ? { uri: item.offered_item_images[0] }
+                : require('../assets/placeholder.png')
+            }
+            style={styles.offerItemImage}
+          />
+          <Text style={styles.offerItemName}>{item.offered_item_title}</Text>
           <Text style={styles.offerItemLabel}>Your offer</Text>
         </View>
       </View>
-      
       <View style={styles.offerMessage}>
         <Text style={styles.messageLabel}>Your message:</Text>
         <Text style={styles.messageText}>{item.message}</Text>
       </View>
-      
-      {item.response && (
-        <View style={styles.offerResponse}>
-          <Text style={styles.responseLabel}>Response:</Text>
-          <Text style={styles.responseText}>{item.response}</Text>
-        </View>
-      )}
-      
       <View style={styles.offerFooter}>
-        <Text style={styles.offerDate}>{formatDate(item.offerDate)}</Text>
+        <Text style={styles.offerDate}>{item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</Text>
         <TouchableOpacity style={styles.chatButton}>
           <Ionicons name="chatbubble" size={16} color={Colors.primary} />
           <Text style={styles.chatButtonText}>Chat</Text>

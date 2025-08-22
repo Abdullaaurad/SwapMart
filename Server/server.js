@@ -6,6 +6,8 @@ const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const offerRoutes = require('./routes/offerRoutes');
+const recentRoutes = require('./routes/recentRoutes');
+const likeRoutes = require('./routes/likeRoutes');
 const path = require('path');
 
 dotenv.config();
@@ -23,7 +25,9 @@ app.use('/Uploads/Offer', express.static(path.join(__dirname, 'Uploads/Offer')))
 app.use('/users', userRoutes);
 app.use('/products', productRoutes);
 app.use('/category', categoryRoutes);
-app.use('/offers', offerRoutes )
+app.use('/offers', offerRoutes );
+app.use('/recent', recentRoutes );
+app.use('/like', likeRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

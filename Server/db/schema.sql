@@ -723,6 +723,57 @@ INSERT INTO swaps (product_id, offer_id, user_accepted, buyer_accepted, swaped, 
 (5, 2, TRUE, TRUE, TRUE, '2024-01-14 14:20:00', '2024-01-16 09:15:00'),
 (7, 3, FALSE, FALSE, FALSE, '2024-01-13 16:45:00', '2024-01-13 16:45:00');
 
+CREATE TABLE IF NOT EXISTS recent_views (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+    viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, product_id)
+);
+
+-- Liked Products table - tracks user likes on products
+CREATE TABLE IF NOT EXISTS liked_products (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+    liked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, product_id)
+);
+
+ATE INDEX IF NOT EXISTS idx_recent_views_user_id ON recent_views(user_id);
+CREATE INDEX IF NOT EXISTS idx_recent_views_product_id ON recent_views(product_id);
+CREATE INDEX IF NOT EXISTS idx_recent_views_viewed_at ON recent_views(viewed_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_liked_products_user_id ON liked_products(user_id);
+CREATE INDEX IF NOT EXISTS idx_liked_products_product_id ON liked_products(product_id);
+CREATE INDEX IF NOT EXISTS idx_liked_products_liked_at ON liked_products(liked_at DESC);
+
+-- Sample data for recent_views
+INSERT INTO recent_views (user_id, product_id, viewed_at) VALUES
+(1, 4, '2025-08-22 10:30:00'),
+(1, 5, '2025-08-22 10:25:00'),
+(1, 7, '2025-08-22 10:20:00'),
+(1, 18, '2025-08-22 10:15:00'),
+(1, 9, '2025-08-22 10:10:00'),
+(1, 10, '2025-08-22 10:05:00'),
+(1, 15, '2025-08-22 10:00:00'),
+(1, 12, '2025-08-22 09:55:00'),
+(1, 13, '2025-08-22 09:50:00'),
+(1, 14, '2025-08-22 09:45:00')
+ON CONFLICT (user_id, product_id) DO UPDATE SET viewed_at = EXCLUDED.viewed_at;
+
+-- Sample data for liked_products
+INSERT INTO liked_products (user_id, product_id, liked_at) VALUES
+(1, 4, '2025-08-22 11:00:00'),
+(1, 7, '2025-08-22 10:45:00'),
+(1, 9, '2025-08-22 10:30:00'),
+(1, 12, '2025-08-22 10:15:00'),
+(1, 15, '2025-08-22 10:00:00'),
+(1, 18, '2025-08-22 09:45:00'),
+(1, 21, '2025-08-22 09:30:00'),
+(1, 24, '2025-08-22 09:15:00')
+ON CONFLICT (user_id, product_id) DO NOTHING;
+
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_ products_user_id ON  products(user_id);

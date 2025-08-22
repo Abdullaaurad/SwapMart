@@ -19,12 +19,9 @@ class Offer {
 
   static async findByBuyer(buyerId) {
     const result = await db.query(
-      `SELECT o.*, p.title as product_title, p.images as product_images,
-              u.username as seller_name
-       FROM offers o
-       LEFT JOIN products p ON o.product_id = p.id
-       LEFT JOIN users u ON o.seller_id = u.id
-       WHERE o.buyer_id = $1
+      `SELECT *
+       FROM offers
+       WHERE buyer_id = $1
        ORDER BY o.created_at DESC`,
       [buyerId]
     );

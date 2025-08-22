@@ -4,6 +4,8 @@ const Category = require('./Category');
 const Offer = require('./Offer');
 const Wanted = require('./Wanted');
 const Swap = require('./Swap')
+const Recent = require('./RecentView');
+const Like = require('./LikeProduct');
 
 module.exports = {
   User,
@@ -11,5 +13,7 @@ module.exports = {
   Category,
   Offer,
   Wanted,
-  Swap
+  Swap,
+  Recent,
+  Like
 }; 

@@ -1,5 +1,4 @@
-// RecentlyViewedPage.js - Browse history
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,66 +8,46 @@ import {
   StatusBar,
   FlatList,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../constants/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
 
 const RecentlyViewedPage = () => {
   const navigation = useNavigation();
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const recentlyViewed = [
-    {
-      id: 1,
-      title: 'Wireless Headphones',
-      price: '$180',
-      condition: 'Like New',
-      image: require('../assets/headphones.jpeg'),
-      seller: 'Audio Expert',
-      viewedDate: new Date(Date.now() - 30 * 60 * 1000),
-      category: 'Electronics',
-      isAvailable: true
-    },
-    {
-      id: 2,
-      title: 'Gaming Keyboard',
-      price: '$120',
-      condition: 'Excellent',
-      image: require('../assets/keyboard.jpeg'),
-      seller: 'Gamer Pro',
-      viewedDate: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      category: 'Electronics',
-      isAvailable: true
-    },
-    {
-      id: 3,
-      title: 'Yoga Mat Set',
-      price: '$45',
-      condition: 'Good',
-      image: require('../assets/yoga.jpeg'),
-      seller: 'Fitness Enthusiast',
-      viewedDate: new Date(Date.now() - 6 * 60 * 60 * 1000),
-      category: 'Sports',
-      isAvailable: false
-    },
-    {
-      id: 4,
-      title: 'Coffee Machine',
-      price: '$250',
-      condition: 'Excellent',
-      image: require('../assets/coffee.jpeg'),
-      seller: 'Coffee Lover',
-      viewedDate: new Date(Date.now() - 12 * 60 * 60 * 1000),
-      category: 'Home',
-      isAvailable: true
+  useEffect(() => {
+    fetchRecentViews();
+  }, []);
+
+  const fetchRecentViews = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching recent views from:', `${BASE_URL}/recent/my-views`);
+      const response = await axios.get(`${BASE_URL}/recent/my-views`);
+      if (response.data.success && Array.isArray(response.data.recents)) {
+        setRecentlyViewed(response.data.recents);
+      } else {
+        setRecentlyViewed([]);
+      }
+    } catch (err) {
+      setRecentlyViewed([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const formatViewTime = (date) => {
+  const formatViewTime = (dateString) => {
+    const date = new Date(dateString);
     const now = new Date();
     const diffInMinutes = (now - date) / (1000 * 60);
-    
+
     if (diffInMinutes < 60) {
       return `${Math.floor(diffInMinutes)}m ago`;
     } else if (diffInMinutes < 24 * 60) {
@@ -78,33 +57,49 @@ const RecentlyViewedPage = () => {
     }
   };
 
-  const clearHistory = () => {
-    // Clear history logic here
-    console.log('Clearing history');
+  const clearHistory = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.delete(`${BASE_URL}/recent/all`);
+    } catch (err) {
+      setRecentlyViewed([]);
+    } finally {
+      setLoading(false);
+    }
+    setRecentlyViewed([]);
   };
 
   const renderRecentItem = ({ item }) => (
     <TouchableOpacity style={styles.recentItemCard}>
-      <Image source={item.image} style={styles.recentItemImage} />
-      
+      <Image
+        source={
+          item.images && Array.isArray(item.images) && item.images.length > 0
+            ? { uri: typeof item.images[0] === 'string' ? item.images[0] : item.images[0].url }
+            : require('../assets/placeholder.png')
+        }
+        style={styles.recentItemImage}
+      />
+
       <View style={styles.recentItemContent}>
         <View style={styles.recentItemHeader}>
           <Text style={styles.recentItemTitle}>{item.title}</Text>
-          <Text style={styles.recentItemTime}>{formatViewTime(item.viewedDate)}</Text>
+          <Text style={styles.recentItemTime}>{formatViewTime(item.viewed_at)}</Text>
         </View>
-        
-        <Text style={styles.recentItemPrice}>{item.price}</Text>
+
+        <Text style={styles.recentItemPrice}>${item.original_price}</Text>
         <Text style={styles.recentItemCondition}>Condition: {item.condition}</Text>
-        <Text style={styles.recentItemSeller}>by {item.seller}</Text>
-        
+        <Text style={styles.recentItemSeller}>by {item.owner_username}</Text>
+
         <View style={styles.recentItemFooter}>
-          <View style={[styles.availabilityBadge, { 
-            backgroundColor: item.isAvailable ? `${Colors.success}15` : `${Colors.danger}15` 
-          }]}>
-            <Text style={[styles.availabilityText, { 
-              color: item.isAvailable ? Colors.success : Colors.danger 
-            }]}>
-              {item.isAvailable ? 'Available' : 'Unavailable'}
+          <View style={[
+            styles.availabilityBadge,
+            { backgroundColor: item.is_available ? `${Colors.success}15` : `${Colors.danger}15` }
+          ]}>
+            <Text style={[
+              styles.availabilityText,
+              { color: item.is_available ? Colors.success : Colors.danger }
+            ]}>
+              {item.is_available ? 'Available' : 'Unavailable'}
             </Text>
           </View>
           <TouchableOpacity style={styles.viewAgainButton}>
@@ -118,8 +113,8 @@ const RecentlyViewedPage = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.surface} />
-      
-      <Header 
+
+      <Header
         icon="back"
         name="Recently Viewed"
         onIconPress={() => navigation.goBack()}
@@ -132,14 +127,23 @@ const RecentlyViewedPage = () => {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={recentlyViewed}
-        renderItem={renderRecentItem}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.recentItemsList}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={recentlyViewed}
+          renderItem={renderRecentItem}
+          keyExtractor={(item) => item.id.toString()}
+          style={styles.recentItemsList}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <Text style={{ color: Colors.textSecondary }}>No recently viewed products.</Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 };
