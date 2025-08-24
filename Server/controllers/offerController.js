@@ -48,13 +48,43 @@ exports.getOffer = async (req, res) => {
     }
 };
 
+const path = require('path');
+
+exports.uploadOfferImage = async (req, res) => {
+  try {
+    // The file is already uploaded by the middleware
+    if (req.file) {
+      return res.status(200).json({
+        success: true,
+        message: 'Image uploaded successfully',
+        filename: req.file.filename, // Just the filename
+        path: req.file.path,
+        size: req.file.size
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+  } catch (error) {
+    console.error('Offer image upload error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 exports.createOffer = async (req, res) => {
   try {
     const buyer_id = req.user.id;
-    const { product_id, offered_item_title, offered_item_description, offered_item_images, message } = req.body;
+    console.log('Buyer ID:', buyer_id);
+    const { product_id, offered_item_title, offered_item_description, message } = req.body;
 
     // Find product and seller
     const product = await Product.findById(product_id);
+    console.log('Product ID:', product_id);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
@@ -67,7 +97,6 @@ exports.createOffer = async (req, res) => {
       seller_id,
       offered_item_title,
       offered_item_description,
-      offered_item_images: offered_item_images || [],
       message,
       status: 'pending'
     };

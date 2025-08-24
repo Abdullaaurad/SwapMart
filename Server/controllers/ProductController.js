@@ -219,52 +219,71 @@ exports.getMyProductsListings = async (req, res) => {
 
 exports.getListingHistory = async (req, res) => {
   const userId = req.user.id;
+  
   try {
     const products = await Product.findByUserlistingsdone(userId);
+    
     const enrichedProducts = [];
     
     for (let product of products) {
       console.log("Product:", product);
+      
       // Get swap data for this product
       const swapData = await Swap.findByProductOne(product.id);
       console.log("Swap Data: ", swapData);
       
       // Get the accepted offer that led to this swap
       const acceptedOffer = await Offer.findById(swapData.offer_id);
-      console.log("Offer id =",acceptedOffer.offer_id);
+      console.log("Offer id =", acceptedOffer.offer_id);
       console.log('Offer: ', acceptedOffer);
-
-      const Userdetails = await User.findById(acceptedOffer.buyer_id)
-      console.log("User Details: ", Userdetails);
       
-      // Enrich product with swap and offer data
+      // Get user details
+      const userDetails = await User.findById(acceptedOffer.buyer_id);
+      console.log("User Details: ", userDetails);
+      
+      // Process product images (my item)
+      const processedProductImages = Array.isArray(product.images)
+        ? product.images.map(img =>
+            `${req.protocol}://${req.get('host')}/Uploads/Product/${typeof img === 'string' ? img : img.url}`
+          )
+        : [];
+
+      const processedOfferImages = Array.isArray(acceptedOffer.offered_item_images)
+        ? acceptedOffer.offered_item_images.map(img =>
+            `${req.protocol}://${req.get('host')}/Uploads/Product/${typeof img === 'string' ? img : img.url}`
+          )
+        : [];
+
       const enrichedProduct = {
         id: product.id,
         swapId: swapData.id,
-        swapPartner: Userdetails.fullname,
-        completedDate: Date(swapData.updated_at),
-        partnerAvatar: Userdetails.profile_image,
-        
+        swapPartner: userDetails.fullname,
+        completedDate: new Date(swapData.updated_at),
+        partnerAvatar: userDetails.profile_image
+          ? `${req.protocol}://${req.get('host')}/Uploads/Profile/${userDetails.profile_image}`
+          : null,
         myItem: {
           name: product.title,
-          image: product.images,
+          image: processedProductImages,
           description: product.description,
+          condition: product.condition || 'N/A'
         },
-        
         receivedItem: {
           name: acceptedOffer.offered_item_title,
-          image: acceptedOffer.offered_item_images,
+          image: processedOfferImages,
           description: acceptedOffer.offered_item_description,
+          condition: acceptedOffer.offered_item_condition || 'N/A'
         }
       };
       
       enrichedProducts.push(enrichedProduct);
     }
-
+    
     return res.status(200).json({
       success: true,
       products: enrichedProducts
     });
+    
   } catch (err) {
     console.error('Error fetching user products:', err);
     return res.status(500).json({
@@ -272,7 +291,7 @@ exports.getListingHistory = async (req, res) => {
       message: 'Internal server error'
     });
   }
-}
+};
 
 exports.createProduct = async (req, res) => {
   const userId = req.user.id; // Get userId from authenticated token

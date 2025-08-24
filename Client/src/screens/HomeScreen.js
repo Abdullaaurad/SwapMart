@@ -38,7 +38,7 @@ const SwapMartHomePage = () => {
   
   // Product state
   const [featuredItems, setFeaturedItems] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null); // Start with "All" selected
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMoreData, setHasMoreData] = useState(true);
   const [categories, setCategories] = useState([]);
@@ -70,14 +70,32 @@ const SwapMartHomePage = () => {
     try {
       const results = await axios.get(`${BASE_URL}/category/findall`);
       if (results.data && results.data.success) {
-        setCategories(results.data.categories || []);
+        // Add "All" category at the beginning
+        const allCategory = {
+          id: null, // null means no category filter
+          name: 'All',
+          icon: 'apps-outline' // Simple grid icon for "All"
+        };
+        setCategories([allCategory, ...(results.data.categories || [])]);
       } else {
-        setCategories([]);
+        // Even if API fails, show "All" category
+        const allCategory = {
+          id: null,
+          name: 'All',
+          icon: 'apps-outline'
+        };
+        setCategories([allCategory]);
         showAlert('Error', results.data?.message || 'Failed to fetch categories', 'error');
       }
     }
     catch (error) {
-      setCategories([]);
+      // On error, still show "All" category
+      const allCategory = {
+        id: null,
+        name: 'All',
+        icon: 'apps-outline'
+      };
+      setCategories([allCategory]);
       console.error('Error fetching categories:', error);
       showAlert('Error', error.message, 'error');
     }
@@ -101,12 +119,13 @@ const SwapMartHomePage = () => {
         limit: 10 // Adjust as needed
       };
       
-      if (categoryId) params.categoryId = categoryId;
+      // Only add categoryId if it's not null (not "All" category)
+      if (categoryId !== null) params.categoryId = categoryId;
       if (search.trim()) params.search = search.trim();
 
-      console.log(params);
+      //console.log(params);
       const result = await axios.get(`${BASE_URL}/products/home`, { params });
-      console.log(result.data.products[0]);
+      // console.log(result.data.products[0]);
       
       
       if (result.data && result.data.success) {
@@ -155,8 +174,6 @@ const SwapMartHomePage = () => {
     return () => clearTimeout(debounceTimer);
   }, [searchQuery, selectedCategory]);
 
-  // Handle category selection
-
   // Handle search input
   const handleSearchChange = (text) => {
     setSearchQuery(text);
@@ -198,7 +215,7 @@ const SwapMartHomePage = () => {
           styles.categoryIcon,
           { backgroundColor: Colors.neutral50 },
           isSelected && { 
-            backgroundColor: Colors.primary,
+            borderColor: Colors.primary,
             transform: [{ scale: 1.1 }]
           }
         ]}>
@@ -288,11 +305,6 @@ const SwapMartHomePage = () => {
           <View style={styles.modernImageContainer}>
             <ItemCard item={itemForCard} />
             
-            {/* Favorite Button */}
-            <TouchableOpacity style={styles.favoriteButton}>
-              <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            
             {/* Condition Badge */}
             {item.condition && (
               <View style={[
@@ -347,7 +359,6 @@ const SwapMartHomePage = () => {
               <View style={styles.statusContainer}>
                 <View style={styles.statusDot} />
                 <Text style={styles.statusText}>Available</Text>
-
               </View>
             </View>
 
@@ -429,14 +440,6 @@ const SwapMartHomePage = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Categories</Text>
-            <TouchableOpacity>
-              <Text 
-                style={styles.viewAllText} 
-                onPress={() => navigation.navigate('ViewAllCategories')}
-              >
-                View All
-              </Text>
-            </TouchableOpacity>
           </View>
           <FlatList
             data={categories}
@@ -453,10 +456,10 @@ const SwapMartHomePage = () => {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
               {searchQuery 
-                ? `Search Results${selectedCategory ? ` in ${categories.find(c => c.id === selectedCategory)?.name}` : ''}`
-                : selectedCategory 
+                ? `Search Results${selectedCategory !== null ? ` in ${categories.find(c => c.id === selectedCategory)?.name}` : ''}`
+                : selectedCategory !== null
                   ? `${categories.find(c => c.id === selectedCategory)?.name} Items`
-                  : 'Featured Items'
+                  : 'All Products'
               }
             </Text>
             {featuredItems.length > 0 && (
@@ -570,9 +573,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Category Styles (keeping original)
+  // Category Styles
   categoriesList: {
-    paddingRight: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   categoryCard: {
     alignItems: 'center',
@@ -792,7 +796,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
 
-  // Quick Actions Styles (keeping original)
+  // Quick Actions Styles
   quickActionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

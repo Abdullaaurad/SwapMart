@@ -78,10 +78,10 @@ class LikedProduct {
   static async isLiked(userId, productId) {
     try {
       const result = await db.query(
-        'SELECT id FROM liked_products WHERE user_id = $1 AND product_id = $2',
+        'SELECT * FROM liked_products WHERE user_id = $1 AND product_id = $2',
         [userId, productId]
       );
-      return result.rows.length > 0;
+      return result.rows[0] || null;
     } catch (error) {
       throw new Error('Failed to check like status: ' + error.message);
     }

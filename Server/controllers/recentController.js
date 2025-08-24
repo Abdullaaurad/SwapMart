@@ -3,10 +3,52 @@ const {Recent} = require('../models');
 exports.getRecent = async (req, res) => {
     const userid = req.user.id;
     try {
-        const Recents = await Recent.getUserRecentViews(userid, 50);
+        const recents = await Recent.getUserRecentViews(userid, 50);
+        
+        // Process each recent item to add full image URLs
+        const processedRecents = recents.map(recent => {
+            // Check if recent has a product property or if recent itself is the product
+            const product = recent.product || recent;
+            
+            return {
+                ...recent,
+                // If recent has a separate product object, process it
+                ...(recent.product && {
+                    product: {
+                        ...product,
+                        images: Array.isArray(product.images)
+                            ? product.images.map(img => {
+                                if (typeof img === 'string') {
+                                    return `${req.protocol}://${req.get('host')}/Uploads/Product/${img}`;
+                                }
+                                return {
+                                    ...img,
+                                    url: `${req.protocol}://${req.get('host')}/Uploads/Product/${img.url || img}`
+                                };
+                            })
+                            : []
+                    }
+                }),
+                // If recent itself contains product data directly, process images
+                ...(!recent.product && {
+                    images: Array.isArray(product.images)
+                        ? product.images.map(img => {
+                            if (typeof img === 'string') {
+                                return `${req.protocol}://${req.get('host')}/Uploads/Product/${img}`;
+                            }
+                            return {
+                                ...img,
+                                url: `${req.protocol}://${req.get('host')}/Uploads/Product/${img.url || img}`
+                            };
+                        })
+                        : []
+                })
+            };
+        });
+
         return res.status(200).json({
             success: true,
-            recents: Recents || []
+            recents: processedRecents || []
         });
     } catch (err) {
         console.error('Error fetching recents:', err);

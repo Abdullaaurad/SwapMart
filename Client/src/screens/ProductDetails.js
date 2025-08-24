@@ -31,6 +31,9 @@ const MyProductDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeId, setLikeId] = useState(null);
+  const [likingInProgress, setLikingInProgress] = useState(false);
   const flatListRef = useRef(null);
 
   const [alertConfig, setAlertConfig] = useState({
@@ -59,6 +62,7 @@ const MyProductDetailsPage = () => {
   useEffect(() => {
     console.log("Product Id: ", route.params.product)
     fetchProductDetails();
+    checkIfLiked();
   }, [productId]);
 
   const fetchProductDetails = async () => {
@@ -66,7 +70,7 @@ const MyProductDetailsPage = () => {
       setLoading(true);
       console.log(productId)
       const response = await axios.get(`${BASE_URL}/products/product/${productId}`);
-      console.log(response.data.products)
+      // console.log(response.data.products)
       if (response.data.success) {
         setProduct(response.data.products);
       } else {
@@ -77,6 +81,80 @@ const MyProductDetailsPage = () => {
       showAlert('Error', error.message, 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Check if the product is already liked by the user
+  const checkIfLiked = async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/like/check/${productId}`);
+      console.log("Like Check Response: ", response.data)
+      if (response.data.success && response.data.liked) {
+        setIsLiked(true);
+        setLikeId(response.data.likeId);
+      } else {
+        setIsLiked(false);
+        setLikeId(null);
+      }
+    } catch (error) {
+      console.error('Error checking like status:', error);
+      // Don't show error alert for like check failure
+    }
+  };
+
+  // Add like
+  const addLike = async () => {
+    try {
+      setLikingInProgress(true);
+      const response = await axios.post(`${BASE_URL}/like/${productId}`);
+      
+      if (response.data.success) {
+        setIsLiked(true);
+        setLikeId(response.data.like.id);
+        showAlert('Success', 'Added to saved items', 'success');
+      } else {
+        showAlert('Error', 'Failed to save item', 'error');
+      }
+    } catch (error) {
+      console.error('Error adding like:', error);
+      showAlert('Error', error.response?.data?.message || error.message, 'error');
+    } finally {
+      setLikingInProgress(false);
+    }
+  };
+
+  // Remove like
+  const removeLike = async () => {
+    console.log("Removing like with ID: ", likeId);
+    if (!likeId) return;
+    
+    try {
+      setLikingInProgress(true);
+      const response = await axios.delete(`${BASE_URL}/like/${likeId}`);
+      
+      if (response.data.success) {
+        setIsLiked(false);
+        setLikeId(null);
+        showAlert('Success', 'Removed from saved items', 'success');
+      } else {
+        showAlert('Error', 'Failed to remove from saved items', 'error');
+      }
+    } catch (error) {
+      console.error('Error removing like:', error);
+      showAlert('Error', error.response?.data?.message || error.message, 'error');
+    } finally {
+      setLikingInProgress(false);
+    }
+  };
+
+  // Toggle like status
+  const toggleLike = async () => {
+    if (likingInProgress) return;
+    
+    if (isLiked) {
+      await removeLike();
+    } else {
+      await addLike();
     }
   };
 
@@ -125,6 +203,22 @@ const MyProductDetailsPage = () => {
             source={{ uri: 'https://via.placeholder.com/400x300' }}
             style={styles.mainImage}
           />
+          {/* Like button for placeholder image */}
+          <TouchableOpacity 
+            style={styles.likeButton}
+            onPress={toggleLike}
+            disabled={likingInProgress}
+          >
+            {likingInProgress ? (
+              <ActivityIndicator size="small" color={Colors.danger} />
+            ) : (
+              <Ionicons 
+                name={isLiked ? "heart" : "heart-outline"} 
+                size={24} 
+                color={isLiked ? Colors.danger : Colors.surface} 
+              />
+            )}
+          </TouchableOpacity>
         </View>
       );
     }
@@ -157,6 +251,23 @@ const MyProductDetailsPage = () => {
           )}
           keyExtractor={(item, index) => index.toString()}
         />
+        
+        {/* Like button */}
+        <TouchableOpacity 
+          style={styles.likeButton}
+          onPress={toggleLike}
+          disabled={likingInProgress}
+        >
+          {likingInProgress ? (
+            <ActivityIndicator size="small" color={Colors.danger} />
+          ) : (
+            <Ionicons 
+              name={isLiked ? "heart" : "heart-outline"} 
+              size={24} 
+              color={isLiked ? Colors.danger : Colors.surface} 
+            />
+          )}
+        </TouchableOpacity>
         
         {/* Image indicators */}
         {product.images.length > 1 && (
@@ -435,7 +546,7 @@ const MyProductDetailsPage = () => {
               style={styles.offerButton}
               onPress={() => {
                 navigation.navigate('MakeOffer', { 
-                  productId: product.id 
+                  ProductId: product.id
                 });
               }}
             >
@@ -497,6 +608,22 @@ const styles = StyleSheet.create({
     height: 300,
     backgroundColor: Colors.neutral50,
   },
+  likeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   imageIndicators: {
     position: 'absolute',
     bottom: 16,
@@ -518,7 +645,7 @@ const styles = StyleSheet.create({
   },
   imageCounter: {
     position: 'absolute',
-    top: 16,
+    bottom: 16,
     right: 16,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     paddingHorizontal: 12,

@@ -108,13 +108,12 @@ const ProductHistoryPage = () => {
       <View style={styles.swapDetails}>
         <View style={styles.itemContainer}>
           <SafeImage 
-            source={item?.myItem?.image?.[0]?.url} 
+            source={item?.myItem?.image[0]} 
             style={styles.itemImage} 
-            alt="My Item"
+            alt="Received Item"
           />
           <View style={styles.itemInfo}>
             <Text style={styles.itemName}>{item?.myItem?.name || 'Unknown Item'}</Text>
-            <Text style={styles.itemCondition}>Condition: {item?.myItem?.condition || 'N/A'}</Text>
             <Text style={styles.itemLabel}>You gave</Text>
           </View>
         </View>
@@ -131,7 +130,6 @@ const ProductHistoryPage = () => {
           />
           <View style={styles.itemInfo}>
             <Text style={styles.itemName}>{item?.receivedItem?.name || 'Unknown Item'}</Text>
-            <Text style={styles.itemCondition}>Condition: {item?.receivedItem?.condition || 'N/A'}</Text>
             <Text style={styles.itemLabel}>You received</Text>
           </View>
         </View>
@@ -142,7 +140,10 @@ const ProductHistoryPage = () => {
           <Ionicons name="chatbubble-outline" size={16} color={Colors.primary} />
           <Text style={styles.actionText}>Contact</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('SwapDetails', { swapId: item.id })}
+        >
           <Ionicons name="receipt-outline" size={16} color={Colors.textSecondary} />
           <Text style={styles.actionText}>Details</Text>
         </TouchableOpacity>

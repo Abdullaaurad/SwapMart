@@ -4,7 +4,8 @@ const likeController = require('../controllers/likeController');
 const { authenticateToken } = require('../middleware/auth');
 
 router.get('/my-likes', authenticateToken, likeController.getLikes);
-router.post('/create', authenticateToken, likeController.addLikes);
+router.post('/:id', authenticateToken, likeController.addLikes);
 router.delete('/:id', authenticateToken, likeController.removeLikes);
+router.get('/check/:productId', authenticateToken, likeController.checkLike);
 
 module.exports = router;

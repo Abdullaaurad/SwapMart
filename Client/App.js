@@ -40,6 +40,7 @@ import SwapHistory from './src/screens/SwapHistory';
 import MyProductDetails from './src/screens/MyProductDetails';
 import ProductDetails from './src/screens/ProductDetails';
 import MakeOffer from './src/screens/MakeOffers';
+import SwapDetails from './src/screens/swapDetails';
 
 const Stack = createNativeStackNavigator();
 
@@ -91,6 +92,7 @@ export default function App() {
         <Stack.Screen name="MyProductDetails" component={MyProductDetails} />
         <Stack.Screen name="ProductDetails" component={ProductDetails} />
         <Stack.Screen name="MakeOffer" component={MakeOffer} />
+        <Stack.Screen name="SwapDetails" component={SwapDetails} />
         
       </Stack.Navigator>
     </NavigationContainer>

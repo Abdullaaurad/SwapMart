@@ -54,7 +54,7 @@ const CircularBackButton = ({
 const styles = StyleSheet.create({
   shadowWrapper: {
     position: 'absolute',
-    top: 20,
+    top: 40,
     left: 15,
     ...Platform.select({
       ios: {

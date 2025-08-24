@@ -8,6 +8,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const offerRoutes = require('./routes/offerRoutes');
 const recentRoutes = require('./routes/recentRoutes');
 const likeRoutes = require('./routes/likeRoutes');
+const swapRoutes = require('./routes/swapRoutes');
 const path = require('path');
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use('/category', categoryRoutes);
 app.use('/offers', offerRoutes );
 app.use('/recent', recentRoutes );
 app.use('/like', likeRoutes);
+app.use('/swaps', swapRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

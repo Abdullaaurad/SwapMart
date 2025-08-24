@@ -63,7 +63,7 @@ exports.getLikes = async (req, res) => {
 
 exports.addLikes = async (req, res) => {
     const userId = req.user.id;
-    const { productId } = req.body;
+    const productId = req.params.id;
     
     // Validate productId
     if (!productId) {
@@ -163,3 +163,48 @@ exports.removeLikes = async (req, res) => {
         });
     }
 };
+
+exports.checkLike = async (req, res) => {
+    const userId = req.user.id;
+    const productId = req.params.productId;
+
+    // Validate productId
+    if (!productId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Product ID is required'
+        });
+    }
+
+    // Validate productId is a number
+    if (isNaN(parseInt(productId))) {
+        return res.status(400).json({
+            success: false,
+            message: 'Product ID must be a valid number'
+        });
+    }
+
+    try {
+        const likeRecord = await Like.isLiked(userId, parseInt(productId));
+        
+        if (likeRecord) {
+            return res.status(200).json({
+                success: true,
+                liked: true,
+                likeId: likeRecord.id  // Access the first record's id
+            });
+        } else {
+            return res.status(200).json({
+                success: false,  // Changed from false to true
+                liked: false,
+                likeId: null
+            });
+        }
+    } catch (err) {
+        console.error('Error checking like:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+}

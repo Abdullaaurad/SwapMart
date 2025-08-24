@@ -1,15 +1,122 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Colors from '../constants/colors';
+import axios from 'axios';
+import { BASE_URL } from '../API/key';
 
-const ItemCard = ({ item, onPressFavorite }) => {
+const ItemCard = ({ item, onPressFavorite, showAlert }) => {
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeId, setLikeId] = useState(null);
+  const [likingInProgress, setLikingInProgress] = useState(false);
+
+  useEffect(() => {
+    if (item?.id) {
+      checkIfLiked();
+    }
+  }, [item?.id]);
+
+  // Check if the product is already liked by the user
+  const checkIfLiked = async () => {
+    console.log('Checking like status for item:', item.id);
+    try {
+      const response = await axios.get(`${BASE_URL}/like/check/${item.id}`);
+      console.log('Like check response:', response.data);
+      if (response.data.success && response.data.liked) {
+        setIsLiked(true);
+        setLikeId(response.data.likeId);
+      } else {
+        setIsLiked(false);
+        setLikeId(null);
+      }
+    } catch (error) {
+      console.error('Error checking like status:', error);
+      // Don't show error alert for like check failure
+    }
+  };
+
+  // Add like
+  const addLike = async () => {
+    try {
+      setLikingInProgress(true);
+      const response = await axios.post(`${BASE_URL}/like/${item.id}`);
+      
+      if (response.data.success) {
+        setIsLiked(true);
+        setLikeId(response.data.like.id);
+        if (showAlert) {
+          showAlert('Success', 'Added to saved items', 'success');
+        }
+        // Call the original onPressFavorite if provided for backward compatibility
+        if (onPressFavorite) {
+          onPressFavorite(item);
+        }
+      } else {
+        if (showAlert) {
+          showAlert('Error', 'Failed to save item', 'error');
+        }
+      }
+    } catch (error) {
+      console.error('Error adding like:', error);
+      if (showAlert) {
+        showAlert('Error', error.response?.data?.message || error.message, 'error');
+      }
+    } finally {
+      setLikingInProgress(false);
+    }
+  };
+
+  // Remove like
+  const removeLike = async () => {
+    if (!likeId) return;
+    
+    try {
+      setLikingInProgress(true);
+      const response = await axios.delete(`${BASE_URL}/like/${likeId}`);
+      
+      if (response.data.success) {
+        setIsLiked(false);
+        setLikeId(null);
+        if (showAlert) {
+          showAlert('Success', 'Removed from saved items', 'success');
+        }
+        // Call the original onPressFavorite if provided for backward compatibility
+        if (onPressFavorite) {
+          onPressFavorite(item);
+        }
+      } else {
+        if (showAlert) {
+          showAlert('Error', 'Failed to remove from saved items', 'error');
+        }
+      }
+    } catch (error) {
+      console.error('Error removing like:', error);
+      if (showAlert) {
+        showAlert('Error', error.response?.data?.message || error.message, 'error');
+      }
+    } finally {
+      setLikingInProgress(false);
+    }
+  };
+
+  // Toggle like status
+  const toggleLike = async () => {
+    if (likingInProgress) return;
+    
+    if (isLiked) {
+      await removeLike();
+    } else {
+      await addLike();
+    }
+  };
+
   return (
     <View style={styles.itemCard}>
       <View style={styles.itemImageContainer}>
@@ -18,7 +125,7 @@ const ItemCard = ({ item, onPressFavorite }) => {
           style={styles.itemImage}
         />
 
-        {/* {item.isHot && (
+        {item.isHot && (
           <View style={styles.hotBadge}>
             <Ionicons name="flame-outline" size={12} color={Colors.surface} />
             <Text style={styles.hotBadgeText}>Hot</Text>
@@ -27,10 +134,19 @@ const ItemCard = ({ item, onPressFavorite }) => {
 
         <TouchableOpacity
           style={styles.favoriteButton}
-          onPress={() => onPressFavorite?.(item)}
+          onPress={toggleLike}
+          disabled={likingInProgress}
         >
-          <Ionicons name="heart-outline" size={16} color={Colors.textSecondary} />
-        </TouchableOpacity> */}
+          {likingInProgress ? (
+            <ActivityIndicator size="small" color={Colors.danger} />
+          ) : (
+            <Ionicons 
+              name={isLiked ? "heart" : "heart-outline"} 
+              size={16} 
+              color={isLiked ? Colors.danger : Colors.textSecondary} 
+            />
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.itemContent}>
@@ -55,7 +171,7 @@ const ItemCard = ({ item, onPressFavorite }) => {
           </Text>
         </View>
 
-        <View style={styles.itemStats}>
+        {/* <View style={styles.itemStats}>
           <View style={styles.statsLeft}>
             <View style={styles.statItem}>
               <Ionicons name="heart-outline" size={12} color={Colors.textTertiary} />
@@ -71,7 +187,7 @@ const ItemCard = ({ item, onPressFavorite }) => {
             <Ionicons name="time-outline" size={12} color={Colors.textTertiary} />
             <Text style={styles.timeText}>{item.timeAgo}</Text>
           </View>
-        </View>
+        </View> */}
       </View>
     </View>
   );
