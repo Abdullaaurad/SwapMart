@@ -774,6 +774,17 @@ INSERT INTO liked_products (user_id, product_id, liked_at) VALUES
 (1, 24, '2025-08-22 09:15:00')
 ON CONFLICT (user_id, product_id) DO NOTHING;
 
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    details TEXT,
+    type VARCHAR(20) DEFAULT 'info', -- success, message, reminder, info, etc.
+    icon VARCHAR(30) DEFAULT 'notifications-outline',
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_ products_user_id ON  products(user_id);

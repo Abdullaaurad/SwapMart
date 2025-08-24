@@ -1,4 +1,7 @@
 const {Recent} = require('../models');
+const { Product } = require('../models');
+const { User } = require('../models');
+const { Notification } = require('../models');
 
 exports.getRecent = async (req, res) => {
     const userid = req.user.id;
@@ -99,6 +102,22 @@ exports.addRecentView = async (req, res) => {
     try {
         // Add view to recent_views table
         const view = await Recent.addView(userId, parseInt(productId));
+
+        const product = await Product.findById(productId);
+        if (product && product.user_id !== userId) { // Don't notify if user views own product
+            const viewer = await User.findById(userId);
+            const ownerId = product.user_id;
+
+            // Create notification for owner
+            await Notification.create({
+                user_id: ownerId,
+                title: 'Product Viewed',
+                message: `${viewer.fullname} viewed your product "${product.title}"`,
+                details: `User ${viewer.fullname} checked out your listing: ${product.title}.`,
+                type: 'info',
+                icon: 'eye-outline'
+            });
+        }
         
         return res.status(201).json({
             success: true,

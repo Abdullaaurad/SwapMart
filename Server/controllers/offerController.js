@@ -1,6 +1,7 @@
 const { Offer } = require('../models');
 const { User } = require('../models');
 const {Product} = require('../models');
+const { Notification } = require('../models');
 
 exports.getOffer = async (req, res) => {
     const userid = req.user.id;
@@ -101,6 +102,18 @@ exports.createOffer = async (req, res) => {
       status: 'pending'
     };
     const newOffer = await Offer.create(offerData);
+
+    const buyer = await User.findById(buyer_id);
+    if (product && product.user_id !== buyer_id) {
+        await Notification.create({
+            user_id: product.user_id,
+            title: 'New Offer Received',
+            message: `${buyer.fullname} made an offer on "${product.title}"`,
+            details: `Offer: ${offered_item_title}. Message: ${message}`,
+            type: 'offer',
+            icon: 'swap-horizontal-outline'
+        });
+      }
 
     return res.status(201).json({
       success: true,
@@ -216,6 +229,18 @@ exports.changeStatus = async (req,res) => {
           updated_at: new Date()
         }
       );
+    }
+
+    const buyer = await User.findById(offer.buyer_id);
+    if (buyer) {
+      await Notification.create({
+        user_id: buyer.id,
+        title: `Offer ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+        message: `Your offer for "${product.title}" was ${status}.`,
+        details: `Status changed to ${status} by product owner.`,
+        type: 'offer',
+        icon: status === 'accepted' ? 'checkmark-circle-outline' : 'close-circle-outline'
+      });
     }
 
     return res.status(200).json({

@@ -23,6 +23,7 @@
     "expo-location": "~18.1.6",
     "expo-status-bar": "~2.2.3",
     "express": "^5.1.0",
+    "firebase": "^12.1.0",
     "fs": "^0.0.1-security",
     "lucide-react": "^0.525.0",
     "multer": "^2.0.2",

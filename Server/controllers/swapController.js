@@ -2,6 +2,7 @@ const { Swap } = require('../models');
 const { Offer } = require('../models');
 const { Product } = require('../models');
 const { User } = require('../models');
+const {Notification} = require("../models");
 
 exports.getSwapById = async (req, res) => {
   const swapId = req.params.id;
@@ -107,6 +108,31 @@ exports.markSwapCompleted = async (req, res) => {
     const swap = await Swap.markSwaped(swapId);
     if (!swap) {
       return res.status(404).json({ success: false, message: 'Swap not found' });
+    }
+    const offer = await Offer.findById(swap.offer_id);
+    const product = await Product.findById(swap.product_id);
+    const owner = await User.findById(product.user_id);
+    const buyer = await User.findById(offer.buyer_id);
+
+    if (owner) {
+        await Notification.create({
+            user_id: owner.id,
+            title: 'Swap Completed',
+            message: `Swap for "${product.title}" is completed.`,
+            details: `You swapped with ${buyer.fullname}.`,
+            type: 'swap',
+            icon: 'checkmark-done-outline'
+        });
+    }
+    if (buyer) {
+        await Notification.create({
+            user_id: buyer.id,
+            title: 'Swap Completed',
+            message: `Swap for "${product.title}" is completed.`,
+            details: `You swapped with ${owner.fullname}.`,
+            type: 'swap',
+            icon: 'checkmark-done-outline'
+        });
     }
     return res.status(200).json({ success: true, swap });
   } catch (err) {

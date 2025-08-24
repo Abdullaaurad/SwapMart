@@ -6,6 +6,7 @@ const Wanted = require('./Wanted');
 const Swap = require('./Swap')
 const Recent = require('./RecentView');
 const Like = require('./LikeProduct');
+const Notification = require('./Notification');
 
 module.exports = {
   User,
@@ -15,5 +16,6 @@ module.exports = {
   Wanted,
   Swap,
   Recent,
-  Like
+  Like,
+  Notification
 }; 

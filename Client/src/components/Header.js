@@ -57,7 +57,10 @@ const Header = ({
     if (!showNotification) return null;
 
     return (
-      <TouchableOpacity style={styles.iconButton}>
+      <TouchableOpacity 
+        style={styles.iconButton}
+        onPress={() => navigation.navigate('Notifications')}
+      >
         <Icon name="notifications-outline" size={24} color={Colors.textSecondary} />
       </TouchableOpacity>
     );

@@ -1,4 +1,7 @@
 const { Like } = require('../models');
+const { User } = require('../models');
+const { Product } = require('../models');
+const { Notification } = require('../models');
 
 exports.getLikes = async (req, res) => {
     const userId = req.user.id;
@@ -89,6 +92,19 @@ exports.addLikes = async (req, res) => {
             return res.status(409).json({
                 success: false,
                 message: 'Product already liked'
+            });
+        }
+
+        const product = await Product.findById(productId);
+        if (product && product.user_id !== userId) {
+            const liker = await User.findById(userId);
+            await Notification.create({
+                user_id: product.user_id,
+                title: 'Product Liked',
+                message: `${liker.fullname} liked your product "${product.title}"`,
+                details: `User ${liker.fullname} liked your listing: ${product.title}.`,
+                type: 'info',
+                icon: 'heart-outline'
             });
         }
         
